@@ -1,17 +1,9 @@
-# Object files
-*.o
+#Ignore everything
+*
+#whitelist folder
 
-# Libraries
-*.lib
-*.a
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
+!software/
+!Module2/
+#but not these
+!*.h
+!*.c
