@@ -23,6 +23,7 @@ alt_up_audio_dev* audio;
  *  global variables declaration end
  */
 
+
 int copysongfromsd() {
 	int handle;
 	alt_up_sd_card_dev* device_sd = NULL;
@@ -67,8 +68,8 @@ int copysongfromsd() {
 				short ret = alt_up_sd_card_read(handle);
 				assert(ret >= 0);
 				soundbuffer[temp] = ret;
-
 			}
+
 			if (alt_up_sd_card_fclose(handle) != -1) {
 				printf("File %s closed.\n", filename);
 			} else {
@@ -86,7 +87,6 @@ int copysongfromsd() {
 	}
 	return 1;
 }
-
 
 void audio_configs_setup(void) {
 	alt_up_av_config_dev * av_config = alt_up_av_config_open_dev(AUDIO_AND_VIDEO_CONFIG_0_NAME);
@@ -117,6 +117,12 @@ void audioISR(void * context, unsigned int ID_IRQ) {
 
 int main()
 {
+		/*
+		 *  message passing/communication example between DE2 and Android
+		 *
+		 *  BEGIN
+		 *
+		 */
 		int i;
 		unsigned char data;
 		unsigned char parity;
@@ -163,8 +169,14 @@ int main()
 			for (i = 0; i < strlen(temp); i++) {
 					alt_up_rs232_write_data(uart, temp[i]);
 			}
-			//printf("Message Echo Complete\n");
+
         }
+    	/*
+    	 *  message passing/communication example between DE2 and Android
+    	 *
+    	 *  END
+    	 *
+    	 */
         return 0;
 }
 
