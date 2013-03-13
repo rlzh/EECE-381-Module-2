@@ -99,7 +99,7 @@ void audio_configs_setup(void) {
 
 void audioISR(void * context, unsigned int ID_IRQ) {
 
-	int temp2 = 0;
+	short int temp2 = 0;
 	for (temp2 = 0; temp2 < bufferconst; temp2++) {
 
 		sam[temp2] = ((soundbuffer[random + 1] << 8) | soundbuffer[random])	<< 8;
@@ -114,7 +114,7 @@ void audioISR(void * context, unsigned int ID_IRQ) {
 }
 
 void sendToAndroid( char* message){
-	int i;
+	short int i;
 	unsigned char data;
 	unsigned char parity;
 
@@ -144,15 +144,14 @@ char* receiveFromAndroid(){
 		/*
 		 * IMPLEMENTATION NOTE: Could instead always receive a predefined amount of bytes
 		 * 						of data from Android side. (e.g. each message from Andriod
-		 * 						will be 8 bytes long)
+		 * 						will always be 8 bytes long)
 		 * 						This way allows passing an array into the function by reference
 		 * 						and function doesn't need to return anything.
 		 */
 
-		int i;
+		short int i;
 		unsigned char data;
 		unsigned char parity;
-
 
 		printf("UART Initialization\n");
 	    alt_up_rs232_dev* uart = alt_up_rs232_open_dev(RS232_0_NAME);
@@ -185,8 +184,7 @@ char* receiveFromAndroid(){
 
 int main()
 {
-
-        return 0;
+	return 0;
 }
 
 

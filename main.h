@@ -14,6 +14,7 @@
 #include "altera_up_sd_card_avalon_interface.h"
 #include "altera_up_avalon_audio_and_video_config.h"
 #include "altera_up_avalon_audio.h"
+#include "sys/alt_irq.h"
 #include <string.h>
 #include "system.h"
 
@@ -35,11 +36,12 @@ struct pList {
 typedef struct pList Playlist;
 
 struct music{
-	unsigned short int songId; // unique numerical id to identify a song
+	unsigned short int songId; 	// unique numerical id to identify a song
 	char* songName;
-	int songSize;
-	int songState;			// state of the song (i.e. playing, paused, stopped)
-	unsigned char* songBuffer;
+	int songState;				// state of the song (i.e. playing, paused, stopped)
+	unsigned char* songBuffer;	// ***** not sure if we need this in the struct *****
+	int songSize;				// ***** not sure if we need this in the struct *****
+
 };
 typedef struct music Song;
 
@@ -52,9 +54,42 @@ void SoundEISR (void * test, unsigned int ID_irq);
 
 void audioISR(void * context, unsigned int ID_IRQ);
 
+void playSong();
+/*
+ * play a chosen song
+ */
+
+void pauseSong();
+/*
+ * pause a chosen song
+ */
+
+void skipSong();
+/*
+ * skip to the beginning or end of a chosen song
+ */
+
+void seekSong();
+/*
+ * seeks forwards and backward through a chosen song
+ */
+
+PlayList makePlayList();
+/*
+ * make a playlist;
+ */
+
+void volumeAdjust();
+/*
+ * adjust the volume of the music
+ */
+
 void sendToAndroid(char* message);
 
 char* receiveFromAndroid();
+
+
+
 
 
 #endif /* MAIN_H_ */
