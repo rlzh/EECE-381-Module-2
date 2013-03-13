@@ -169,11 +169,11 @@ char* receiveFromAndroid(){
 				while (alt_up_rs232_get_used_space_in_read_FIFO(uart) == 0);
 				alt_up_rs232_read_data(uart, &data, &parity);
 				temp[i] = data;
-
 				printf("%c", data);
 			}
 
 	    }
+	    return temp;
 }
 
 
