@@ -10,6 +10,111 @@
 #include <string.h>
 #include "system.h"
 
+
+int copysongfromsd() {
+	int handle;
+	alt_up_sd_card_dev *device_sd = NULL;
+	char filename[15] = "ZELDA.wav";
+	int header = 44;
+	int connect = 0;
+
+
+	device_sd = alt_up_sd_card_open_dev(ALTERA_UP_SD_CARD_AVALON_INTERFACE_0_NAME);
+
+	if (device_sd != NULL) {
+
+		if ((connect == 0) && (alt_up_sd_card_is_Present())) {
+			printf("Card connected.\n");
+			if (alt_up_sd_card_is_FAT16()) {
+				printf("FAT16 file system detected.\n");
+			} else {
+				printf("Unknown file system.\n");
+				return 0;
+			}
+
+			// OPENS FILE
+			handle = alt_up_sd_card_fopen(filename, false);
+			if (handle >= 0) {
+				printf("%s successfully opened!\n", filename);
+				printf("Loading %s.", filename);
+			} else {
+				printf("Error opening %s\n", filename);
+			}
+
+			soundbuffer = (unsigned char*) malloc(songsize + 96* sizeof(unsigned char));
+			if (soundbuffer == NULL) {
+				printf("malloc failed");
+			}
+			int temp;
+			for (temp = 0; temp < header; temp++) {
+				alt_up_sd_card_read(handle);
+
+			}
+			for (temp = 0; temp < songsize; temp++) {
+				short ret = alt_up_sd_card_read(handle);
+				assert(ret >= 0);
+				soundbuffer[temp] = ret;
+
+			}
+			if (alt_up_sd_card_fclose(handle) != -1) {
+				printf("File %s closed.\n", filename);
+			} else {
+				printf("Error closing %s\n", filename);
+				return -1;
+			}
+			connect = 1;
+
+		}
+
+		else if ((connect == 1) && (alt_up_sd_card_is_Present() == false)) {
+			printf("Card disconnected.\n");
+			return -1;
+		}
+	}
+	return 1;
+}
+
+void SoundEISR (void * test, unsigned int ID_irq)
+{
+	int temp2 = 0;
+	for (temp2 = 0; temp2 < bufferconst; temp2++) {
+		sam[temp2] = ((effectsbuffer[random + 1] << 8) | effectsbuffer[random]) << 8;
+		random += 2;
+	}
+	if (random >= soundsize)
+		random = 0;
+
+	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_LEFT);
+	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
+}
+
+void audio_configs_setup(void) {
+	alt_up_av_config_dev * av_config = alt_up_av_config_open_dev(AUDIO_AND_VIDEO_CONFIG_0_NAME);
+	alt_up_av_config_reset(av_config);
+	while (!alt_up_av_config_read_ready(av_config)) {
+	}
+	audio = alt_up_audio_open_dev(AUDIO_0_NAME);
+	alt_up_audio_reset_audio_core(audio);
+}
+
+void audioISR(void * context, unsigned int ID_IRQ) {
+
+	int temp2 = 0;
+	for (temp2 = 0; temp2 < bufferconst; temp2++) {
+
+		sam[temp2] = ((soundbuffer[random + 1] << 8) | soundbuffer[random])	<< 8;
+		random += 2;
+
+	}
+	if (random >= songsize)
+		random = 0;
+
+	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_LEFT);
+	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
+}
+
+
+
 int main()
 {
 		int i;
