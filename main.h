@@ -38,7 +38,7 @@ struct music{
 	unsigned short int songId; // unique numerical id to identify a song
 	char* songName;
 	int songSize;
-	unsigned char *songbuffer;
+	unsigned char* songBuffer;
 };
 typedef struct music Song;
 

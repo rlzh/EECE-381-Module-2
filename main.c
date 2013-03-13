@@ -23,6 +23,7 @@ alt_up_audio_dev* audio;
  *  global variables declaration end
  */
 
+
 int copysongfromsd() {
 	int handle;
 	alt_up_sd_card_dev* device_sd = NULL;
@@ -67,8 +68,8 @@ int copysongfromsd() {
 				short ret = alt_up_sd_card_read(handle);
 				assert(ret >= 0);
 				soundbuffer[temp] = ret;
-
 			}
+
 			if (alt_up_sd_card_fclose(handle) != -1) {
 				printf("File %s closed.\n", filename);
 			} else {
@@ -116,6 +117,12 @@ void audioISR(void * context, unsigned int ID_IRQ) {
 
 int main()
 {
+		/*
+		 *  message passing/communication example between DE2 and Android
+		 *
+		 *  BEGIN
+		 *
+		 */
 		int i;
 		unsigned char data;
 		unsigned char parity;
@@ -164,6 +171,12 @@ int main()
 			}
 
         }
+    	/*
+    	 *  message passing/communication example between DE2 and Android
+    	 *
+    	 *  END
+    	 *
+    	 */
         return 0;
 }
 
