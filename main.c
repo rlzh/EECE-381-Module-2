@@ -113,11 +113,10 @@ void audioISR(void * context, unsigned int ID_IRQ) {
 	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
 }
 
-void sendToAndroid(char signal[]){
+void sendToAndroid( char* message){
 	int i;
 	unsigned char data;
 	unsigned char parity;
-    unsigned char message[] = "EECE381 is so much fun";
 
     printf("UART Initialization\n");
     alt_up_rs232_dev* uart = alt_up_rs232_open_dev(RS232_0_NAME);
@@ -131,7 +130,7 @@ void sendToAndroid(char signal[]){
 
     // Start with the number of bytes in our message
 
-	alt_up_rs232_write_data(uart, (unsigned char) strlen(message));
+	alt_up_rs232_write_data(uart, (char) strlen(message));
 
 	// Now send the actual message to the Middleman
 
@@ -142,38 +141,45 @@ void sendToAndroid(char signal[]){
 
 
 char* receiveFromAndroid(){
+		/*
+		 * IMPLEMENTATION NOTE: Could instead always receive a predefined amount of bytes
+		 * 						of data from Android side. (e.g. each message from Andriod
+		 * 						will be 8 bytes long)
+		 * 						This way allows passing an array into the function by reference
+		 * 						and function doesn't need to return anything.
+		 */
 
 		int i;
 		unsigned char data;
 		unsigned char parity;
 
+
 		printf("UART Initialization\n");
 	    alt_up_rs232_dev* uart = alt_up_rs232_open_dev(RS232_0_NAME);
 
-	    while (1){
-			printf("Clearing read buffer to start\n");
-			while (alt_up_rs232_get_used_space_in_read_FIFO(uart)) {
-				alt_up_rs232_read_data(uart, &data, &parity);
-			}
-			printf("Waiting for data to come from the Middleman\n");
-			while (alt_up_rs232_get_used_space_in_read_FIFO(uart) == 0);
 
-			// First byte is the number of characters in our message
-
+		printf("Clearing read buffer to start\n");
+		while (alt_up_rs232_get_used_space_in_read_FIFO(uart)) {
 			alt_up_rs232_read_data(uart, &data, &parity);
-			int num_to_receive = (int)data;
-			unsigned char temp[num_to_receive];
+		}
+		printf("Waiting for data to come from the Middleman\n");
+		while (alt_up_rs232_get_used_space_in_read_FIFO(uart) == 0);
 
-			printf("About to receive %d characters:\n", num_to_receive);
-			for (i = 0; i < num_to_receive; i++) {
-				while (alt_up_rs232_get_used_space_in_read_FIFO(uart) == 0);
-				alt_up_rs232_read_data(uart, &data, &parity);
-				temp[i] = data;
-				printf("%c", data);
-			}
+		// First byte is the number of characters in our message
 
-	    }
-	    return temp;
+		alt_up_rs232_read_data(uart, &data, &parity);
+		int num_to_receive = (int)data;
+		char* message = malloc(num_to_receive * sizeof(char));
+
+		printf("About to receive %d characters:\n", num_to_receive);
+		for (i = 0; i < num_to_receive; i++) {
+			while (alt_up_rs232_get_used_space_in_read_FIFO(uart) == 0);
+			alt_up_rs232_read_data(uart, &data, &parity);
+			message[i] = data;
+			printf("%c", data);
+		}
+
+	    return message;
 }
 
 

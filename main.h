@@ -44,13 +44,15 @@ struct music{
 typedef struct music Song;
 
 
+// FUNCTION DECLARATIONS
+
 int copysongfromsd();
 
 void SoundEISR (void * test, unsigned int ID_irq);
 
 void audioISR(void * context, unsigned int ID_IRQ);
 
-void sendToAndroid(char signal[]);
+void sendToAndroid(char* message);
 
 char* receiveFromAndroid();
 
