@@ -17,7 +17,7 @@
 #include <string.h>
 #include "system.h"
 
-typedef int bool;
+//typedef int bool;
 #define true 1
 #define false 0
 
@@ -38,14 +38,21 @@ struct music{
 	unsigned short int songId; // unique numerical id to identify a song
 	char* songName;
 	int songSize;
+	int songState;			// state of the song (i.e. playing, paused, stopped)
 	unsigned char* songBuffer;
 };
 typedef struct music Song;
 
 
 int copysongfromsd();
+
 void SoundEISR (void * test, unsigned int ID_irq);
+
 void audioISR(void * context, unsigned int ID_IRQ);
+
+void sendToAndroid(char signal[]);
+
+char* receiveFromAndroid();
 
 
 #endif /* MAIN_H_ */
