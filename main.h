@@ -17,9 +17,31 @@
 #include <string.h>
 #include "system.h"
 
-//typedef int bool;
+typedef int bool;
 #define true 1
 #define false 0
+
+// CONSTANTS DECLARATION
+
+#define MAX_SONGS_ALLOWED 20
+
+struct pList {
+	unsigned short int numOfSongs;
+	unsigned short int list[MAX_SONGS_ALLOWED]; 	// limit to a maximum number of songs allowed for now...
+	char* prevSongName;
+	char* currentSongName;
+	char* nextSongName;
+};
+typedef struct pList Playlist;
+
+struct music{
+	unsigned short int songId; // unique numerical id to identify a song
+	char* songName;
+	int songSize;
+	unsigned char *songbuffer;
+};
+typedef struct music Song;
+
 
 int copysongfromsd();
 void SoundEISR (void * test, unsigned int ID_irq);

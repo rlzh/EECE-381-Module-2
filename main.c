@@ -87,7 +87,6 @@ int copysongfromsd() {
 	return 1;
 }
 
-
 void audio_configs_setup(void) {
 	alt_up_av_config_dev * av_config = alt_up_av_config_open_dev(AUDIO_AND_VIDEO_CONFIG_0_NAME);
 	alt_up_av_config_reset(av_config);
@@ -163,7 +162,7 @@ int main()
 			for (i = 0; i < strlen(temp); i++) {
 					alt_up_rs232_write_data(uart, temp[i]);
 			}
-			//printf("Message Echo Complete\n");
+
         }
         return 0;
 }
