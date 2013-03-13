@@ -5,18 +5,31 @@
  *
  */
 
-#include <stdio.h>
-#include "altera_up_avalon_rs232.h"
-#include <string.h>
-#include "system.h"
 
+#include "main.h"
+
+
+/*
+ *  global variables declaration begin
+ */
+unsigned char *soundbuffer;
+unsigned int sam[96];
+int random ;
+int songsize;
+const int bufferconst = 96;
+alt_up_audio_dev* audio;
+
+/*
+ *  global variables declaration end
+ */
 
 int copysongfromsd() {
 	int handle;
-	alt_up_sd_card_dev *device_sd = NULL;
+	alt_up_sd_card_dev* device_sd = NULL;
 	char filename[15] = "ZELDA.wav";
 	int header = 44;
 	int connect = 0;
+	int songsize = 0;
 
 
 	device_sd = alt_up_sd_card_open_dev(ALTERA_UP_SD_CARD_AVALON_INTERFACE_0_NAME);
@@ -74,19 +87,6 @@ int copysongfromsd() {
 	return 1;
 }
 
-void SoundEISR (void * test, unsigned int ID_irq)
-{
-	int temp2 = 0;
-	for (temp2 = 0; temp2 < bufferconst; temp2++) {
-		sam[temp2] = ((effectsbuffer[random + 1] << 8) | effectsbuffer[random]) << 8;
-		random += 2;
-	}
-	if (random >= soundsize)
-		random = 0;
-
-	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_LEFT);
-	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
-}
 
 void audio_configs_setup(void) {
 	alt_up_av_config_dev * av_config = alt_up_av_config_open_dev(AUDIO_AND_VIDEO_CONFIG_0_NAME);
