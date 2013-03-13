@@ -9,12 +9,14 @@
 #include "altera_up_avalon_rs232.h"
 #include <string.h>
 #include "system.h"
+#include "main.h"
 
 
 /*
  *  global variables
  */
 unsigned char *soundbuffer;
+int random;
 
 int copysongfromsd() {
 	int handle;
