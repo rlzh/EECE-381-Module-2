@@ -49,7 +49,7 @@ typedef struct music Song;
 
 int copysongfromsd(char* filename);
 
-void SoundEISR (void * test, unsigned int ID_irq);
+void audio_configs_setup(void);
 
 void audioISR(void * context, unsigned int ID_IRQ);
 

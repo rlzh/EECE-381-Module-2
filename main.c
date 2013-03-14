@@ -194,11 +194,11 @@ int addToPlaylist(Song s, PlaylistPtr ptr){
 		return 2;
 
 	for (i = 0; i < (*ptr).numOfSongs; i++){		// check if song is already in playlist
-		if (s.songId == ((*ptr).list[i]).songId)
+		if (s.songId == ((*ptr).list[i]))
 			return 1;
 	}
 
-	(*ptr).list[numOfSongs] = s.songId;		// add song to end of playlist
+	(*ptr).list[(*ptr).numOfSongs] = s.songId;		// add song to end of playlist
 	(*ptr).numOfSongs++;
 	return 0;
 }
@@ -214,13 +214,13 @@ int removeFromPlaylist(Song s, PlaylistPtr ptr){
 	 * 						could switch to use recursion later on.
 	 */
 	for (i = 0; i < (*ptr).numOfSongs; i++){		// check if song is in playlist
-		if (s.songId == ((*ptr).list[i]).songId){
+		if (s.songId == ((*ptr).list[i])){
 			temp = i;
-			i = numOfSongs;
+			i = (*ptr).numOfSongs;
 		}
 	}
 	for (i = temp; i < (*ptr).numOfSongs; i++){	// shift songs 1 over
-		if (i == (numOfSongs - 1))
+		if (i == ((*ptr).numOfSongs - 1))
 			(*ptr).list[i] = 0;
 		else
 			(*ptr).list[i] = (*ptr).list[i+1];
@@ -232,6 +232,7 @@ int removeFromPlaylist(Song s, PlaylistPtr ptr){
 
 int main()
 {
+
 	return 0;
 }
 
