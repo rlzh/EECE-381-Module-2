@@ -29,11 +29,10 @@
 struct pList {
 	unsigned short int numOfSongs;
 	unsigned short int list[MAX_SONGS_ALLOWED]; 	// limit to a maximum number of songs allowed for now...
-	char* prevSongName;
-	char* currentSongName;
-	char* nextSongName;
+	unsigned short int currentSong;		// index of the song currently playing in list
 };
 typedef struct pList Playlist;
+typedef Playlist* PlaylistPtr;
 
 struct music{
 	unsigned short int songId; 	// unique numerical id to identify a song
@@ -48,7 +47,7 @@ typedef struct music Song;
 
 // FUNCTION DECLARATIONS
 
-int copysongfromsd();
+int copysongfromsd(char* filename);
 
 void SoundEISR (void * test, unsigned int ID_irq);
 
@@ -74,21 +73,27 @@ void seekSong();
  * seeks forwards and backward through a chosen song
  */
 
-PlayList makePlayList();
-/*
- * make a playlist;
- */
-
 void volumeAdjust();
 /*
  * adjust the volume of the music
  */
 
+Playlist createPlaylist();
+/*
+ * creates and returns an empty playlist
+ */
+
+int addToPlaylist(Song s, PlaylistPtr ptr);
+/*
+ * adds chosen song 's' to the chosen playlist pointed to by 'ptr'
+ * returns 0 if song successfully added
+ * returns 1 if song already exists in playlist
+ * returns 2 if playlist is full
+ */
+
 void sendToAndroid(char* message);
 
 char* receiveFromAndroid();
-
-
 
 
 

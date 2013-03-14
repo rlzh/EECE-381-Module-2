@@ -24,10 +24,9 @@ alt_up_audio_dev* audio;
  */
 
 
-int copysongfromsd() {
+int copysongfromsd(char* filename) {
 	int handle;
 	alt_up_sd_card_dev* device_sd = NULL;
-	char filename[15] = "ZELDA.wav";
 	int header = 44;
 	int connect = 0;
 	int songsize = 0;
@@ -181,6 +180,28 @@ char* receiveFromAndroid(){
 	    return message;
 }
 
+Playlist createPlaylist(){
+	Playlist p;
+	p.numOfSongs = 0;
+	p.list[MAX_SONGS_ALLOWED] = 0;
+	p.currentSong = 0;
+	return p;
+}
+
+int addToPlaylist(Song s, PlaylistPtr ptr){
+	int i;
+	if ((*ptr).numOfSongs == MAX_SONGS_ALLOWED) // check if playlist has reached limit
+		return 2;
+
+	for (i = 0; i < numOfSongs; i++){		// check if song is already in playlist
+		if (s.songId == ((*ptr).list[i]).songId)
+			return 1;
+	}
+
+	(*ptr).list[numOfSongs] = s.songId;		// add song to end of playlist
+	(*ptr).numOfSongs++;
+	return 0;
+}
 
 int main()
 {
