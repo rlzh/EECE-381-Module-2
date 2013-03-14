@@ -91,6 +91,13 @@ int addToPlaylist(Song s, PlaylistPtr ptr);
  * returns 2 if playlist is full
  */
 
+int removeFromPlaylist(Song s, PlaylistPtr ptr);
+/*
+ * removes song 's' from playlist pointed to by 'ptr'
+ * returns 0 if song successfully removed
+ * returns 1 if song is not found in playlist
+ */
+
 void sendToAndroid(char* message);
 
 char* receiveFromAndroid();

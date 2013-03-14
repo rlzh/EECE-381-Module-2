@@ -193,13 +193,40 @@ int addToPlaylist(Song s, PlaylistPtr ptr){
 	if ((*ptr).numOfSongs == MAX_SONGS_ALLOWED) // check if playlist has reached limit
 		return 2;
 
-	for (i = 0; i < numOfSongs; i++){		// check if song is already in playlist
+	for (i = 0; i < (*ptr).numOfSongs; i++){		// check if song is already in playlist
 		if (s.songId == ((*ptr).list[i]).songId)
 			return 1;
 	}
 
 	(*ptr).list[numOfSongs] = s.songId;		// add song to end of playlist
 	(*ptr).numOfSongs++;
+	return 0;
+}
+
+int removeFromPlaylist(Song s, PlaylistPtr ptr){
+	int i;
+	int temp;
+	if ((*ptr).numOfSongs == 0) // check if playlist is empty
+		return 1;
+
+	/*
+	 * IMPLEMENTATION NOTE: removing song by brute force right now
+	 * 						could switch to use recursion later on.
+	 */
+	for (i = 0; i < (*ptr).numOfSongs; i++){		// check if song is in playlist
+		if (s.songId == ((*ptr).list[i]).songId){
+			temp = i;
+			i = numOfSongs;
+		}
+	}
+	for (i = temp; i < (*ptr).numOfSongs; i++){	// shift songs 1 over
+		if (i == (numOfSongs - 1))
+			(*ptr).list[i] = 0;
+		else
+			(*ptr).list[i] = (*ptr).list[i+1];
+	}
+
+	(*ptr).numOfSongs--;
 	return 0;
 }
 
