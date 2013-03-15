@@ -29,7 +29,8 @@ void audioISR(void * context, unsigned int ID_IRQ);
 
 void getSongFromSD();
 /*
- * finds the file names of every WAV file in SDcard and stores them in an array
+ * finds the file names of every WAV file in SD card and adds them
+ * into the global playlist 'songLibrary'
  */
 
 int copysongfromsd(char* filename);
