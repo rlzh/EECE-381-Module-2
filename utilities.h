@@ -29,15 +29,6 @@
 
 // DATA STRUCTURE
 
-struct pList {
-	unsigned short int numOfSongs;
-	unsigned short int list[MAX_SONGS_ALLOWED]; 	// limit to a maximum number of songs allowed for now...
-	unsigned short int order[MAX_SONGS_ALLOWED];	// order in which songs in the playlist should be played
-	unsigned short int currentSong;		// index of the song currently playing in list
-};
-typedef struct pList Playlist;
-typedef Playlist* PlaylistPtr;
-
 struct header
 {
     char chunk_id[4];
@@ -56,19 +47,27 @@ struct header
     int subchunk2_size;
 };
 typedef struct header SongHeader;
-typedef struct SongHeader* SongHeaderPtr;
+typedef SongHeader* SongHeaderPtr;
 
 struct music{
-	unsigned short int songId; 	// unique numerical id to identify a song
+	unsigned short int songId; // unique numerical id to identify a song [ 0 == dummy song | songId > 0 == actual song]
 	char* songName;
-	int songState;				// state of the song (i.e. 2 == playing, 1 == paused, 0 == stopped,)
-	unsigned char* songBuffer;	// ***** not sure if we need this in the struct *****
-	int songSize;				// ***** not sure if we need this in the struct *****
+	int songState;			   // state of the song (i.e. 2 == playing, 1 == paused, 0 == stopped,)
+	unsigned char* songBuffer; // ***** not sure if we need this in the struct *****
+	int songSize;			   // ***** not sure if we need this in the struct *****
 	SongHeader header;
 };
 typedef struct music Song;
-typedef struct Song* SongPtr;
+typedef Song* SongPtr;
 
+struct pList {
+	unsigned short int numOfSongs;
+	Song list[MAX_SONGS_ALLOWED]; 				// limit to a maximum number of songs allowed for now...
+	unsigned short int order[MAX_SONGS_ALLOWED];// order in which songs in the playlist should be played
+	unsigned short int currentSong;				// index of the song currently playing in list
+};
+typedef struct pList Playlist;
+typedef Playlist* PlaylistPtr;
 
 // FUNCTION DECLARATIONS
 

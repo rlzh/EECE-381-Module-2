@@ -53,10 +53,10 @@ void audioISR(void * context, unsigned int ID_IRQ) {
 
 void getSongFromSD(){
 		alt_up_sd_card_dev* device_reference = NULL;
-		int connected = 0;
-		int first_file = 0;
-		int list_file = 1;
-		int read_file = 1;
+		short int connected = 0;
+		short int first_file = 0;
+		short int list_file = 1;
+		short int read_file = 1;
 		int file_handle;
 		int file_data;
 		char* file_name;
@@ -109,7 +109,9 @@ void getSongFromSD(){
 					}
 				}
 				else if ((connected == 1) && (alt_up_sd_card_is_Present()) && (read_file == 1)){
-					file_handle = alt_up_sd_card_fopen("INFO.txt", false);
+					// commented out code below used for debug
+
+					/*file_handle = alt_up_sd_card_fopen("INFO.txt", false);
 					while ((file_data = alt_up_sd_card_read(file_handle)) >= 0){
 						//printf("%c",(char) file_data);
 						if (strcmp((char*)&file_data, ",") != 0){
@@ -121,21 +123,39 @@ void getSongFromSD(){
 						}
 					}
 					alt_up_sd_card_fclose(file_handle);
-					read_file = 0;
+					read_file = 0; */
 					break;
 				}
 			}
 		}
 }
 
+void getSongHeader(SongPtr song){
+	alt_up_sd_card_dev* device_reference = NULL;
+	int i;
+	char* file_name = (*song).songName;
+	int file_data;
+	int file_handle;
+	int header = 44;
+
+	device_reference = alt_up_sd_card_open_dev(ALTERA_UP_SD_CARD_AVALON_INTERFACE_0_NAME);
+	strcat(file_name, ".WAV");
+
+	if ( device_reference != NULL && (alt_up_sd_card_is_FAT16()) && (alt_up_sd_card_is_Present())){
+		file_handle = alt_up_sd_card_fopen(file_name, false);
+		for (i = 0; i < header; i++){
+			file_data = alt_up_sd_card_read(file_handle);
+			printf("%c", file_data);
+		}
+		alt_up_sd_card_fclose(file_handle);
+	}
+}
 
 int copysongfromsd(char* filename) {
 	int handle;
 	alt_up_sd_card_dev* device_sd = NULL;
 	int header = 44;
 	int connect = 0;
-
-
 
 	device_sd = alt_up_sd_card_open_dev(ALTERA_UP_SD_CARD_AVALON_INTERFACE_0_NAME);
 
@@ -265,6 +285,7 @@ int main()
 {
 	songLibrary = createPlaylist();
 	getSongFromSD();
+	getSongHeader(&((songLibrary).list[(songLibrary).currentSong]));
 	//////////////////////// SETUP AUDIO //////////////////////////////////////////////
 	audio_configs_setup();
 	if (copysongfromsd("FFI.wav") != 1) {

@@ -33,6 +33,12 @@ void getSongFromSD();
  * into the global playlist 'songLibrary'
  */
 
+void getSongHeader(SongPtr s);
+/*
+ * reads the header file of song pointed to by 's' and stores it
+ * as a member variable
+ */
+
 int copysongfromsd(char* filename);
 
 void sendToAndroid(char* message);
