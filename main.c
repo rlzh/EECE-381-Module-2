@@ -15,13 +15,118 @@
 unsigned char *soundbuffer;
 unsigned int sam[96];
 int random ;
-int songsize;
+int songsize = 784000;
 const int bufferconst = 96;
 alt_up_audio_dev* audio;
+Playlist songLibrary;
+unsigned short int idCount = 1;
 
 /*
  *  global variables declaration end
  */
+
+void audio_configs_setup(void) {
+	alt_up_av_config_dev * av_config = alt_up_av_config_open_dev(AUDIO_AND_VIDEO_CONFIG_0_NAME);
+	alt_up_av_config_reset(av_config);
+	while (!alt_up_av_config_read_ready(av_config)) {
+	}
+	audio = alt_up_audio_open_dev(AUDIO_0_NAME);
+	alt_up_audio_reset_audio_core(audio);
+}
+
+void audioISR(void * context, unsigned int ID_IRQ) {
+
+	short int temp2 = 0;
+	for (temp2 = 0; temp2 < bufferconst; temp2++) {
+
+		sam[temp2] = ((soundbuffer[random + 1] << 8) | soundbuffer[random])	<< 8;
+		random += 2;
+
+	}
+	if (random >= songsize)
+		random = 0;
+
+	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_LEFT);
+	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
+}
+
+
+void getSongFromSD(){
+		alt_up_sd_card_dev* device_reference = NULL;
+		int connected = 0;
+		int first_file = 0;
+		int list_file = 1;
+		int read_file = 1;
+		int file_handle;
+		int file_data;
+		char* file_name;
+		char* temp;
+		Song song;
+
+		device_reference = alt_up_sd_card_open_dev(ALTERA_UP_SD_CARD_AVALON_INTERFACE_0_NAME);
+
+		if (device_reference != NULL) {
+			while(1) {
+				// first detection of FAT 16 SD card
+				if ((connected == 0) && (alt_up_sd_card_is_Present())) {
+					printf("Card connected.\n");
+					if (alt_up_sd_card_is_FAT16()) {
+						printf("FAT 16 file system detected.\n");
+					} else {
+						printf("Unknown file system.\n");
+						break;
+					}
+					connected = 1;
+				}
+				// SD card is still connected
+				else if ((connected == 1) && (alt_up_sd_card_is_Present()) && (list_file == 1)){
+					// finding the first file in directory
+					if ((first_file == 0) && (alt_up_sd_card_find_first("", file_name)) == 0){
+						printf("Listing WAV files found on disk\n");
+						// identify current file is a WAV file
+						if (strstr(file_name, ".WAV") != NULL){
+							temp = strtok(file_name, ".");
+							printf("%s\n", temp);
+							song = createSong(temp, &idCount);
+							addToPlaylist(song, &songLibrary);
+						}
+						first_file = 1;
+					}
+					// finding the next file in directory
+					else if((first_file == 1) && (alt_up_sd_card_find_next(file_name) == 0)){
+						// identify current file is a WAV file
+						if (strstr(file_name, ".WAV") != NULL){
+							temp = strtok(file_name, ".");
+							printf("%s\n", temp);
+							song = createSong(temp, &idCount);
+							addToPlaylist(song, &songLibrary);
+						}
+					}
+					else {
+						printf("Finished listing WAV files\n");
+						first_file = 0;
+						list_file = 0;
+					}
+				}
+				else if ((connected == 1) && (alt_up_sd_card_is_Present()) && (read_file == 1)){
+					file_handle = alt_up_sd_card_fopen("INFO.txt", false);
+					while ((file_data = alt_up_sd_card_read(file_handle)) >= 0){
+						//printf("%c",(char) file_data);
+						if (strcmp((char*)&file_data, ",") != 0){
+							strcat(temp, (char*)&file_data);
+						}
+						else{
+							printf("%s\n", temp);
+							strcpy(temp, "");
+						}
+					}
+					alt_up_sd_card_fclose(file_handle);
+					read_file = 0;
+					break;
+				}
+			}
+		}
+}
 
 
 int copysongfromsd(char* filename) {
@@ -29,7 +134,7 @@ int copysongfromsd(char* filename) {
 	alt_up_sd_card_dev* device_sd = NULL;
 	int header = 44;
 	int connect = 0;
-	int songsize = 0;
+
 
 
 	device_sd = alt_up_sd_card_open_dev(ALTERA_UP_SD_CARD_AVALON_INTERFACE_0_NAME);
@@ -85,31 +190,6 @@ int copysongfromsd(char* filename) {
 		}
 	}
 	return 1;
-}
-
-void audio_configs_setup(void) {
-	alt_up_av_config_dev * av_config = alt_up_av_config_open_dev(AUDIO_AND_VIDEO_CONFIG_0_NAME);
-	alt_up_av_config_reset(av_config);
-	while (!alt_up_av_config_read_ready(av_config)) {
-	}
-	audio = alt_up_audio_open_dev(AUDIO_0_NAME);
-	alt_up_audio_reset_audio_core(audio);
-}
-
-void audioISR(void * context, unsigned int ID_IRQ) {
-
-	short int temp2 = 0;
-	for (temp2 = 0; temp2 < bufferconst; temp2++) {
-
-		sam[temp2] = ((soundbuffer[random + 1] << 8) | soundbuffer[random])	<< 8;
-		random += 2;
-
-	}
-	if (random >= songsize)
-		random = 0;
-
-	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_LEFT);
-	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
 }
 
 void sendToAndroid( char* message){
@@ -180,58 +260,25 @@ char* receiveFromAndroid(){
 	    return message;
 }
 
-Playlist createPlaylist(){
-	Playlist p;
-	p.numOfSongs = 0;
-	p.list[MAX_SONGS_ALLOWED] = 0;
-	p.currentSong = 0;
-	return p;
-}
-
-int addToPlaylist(Song s, PlaylistPtr ptr){
-	int i;
-	if ((*ptr).numOfSongs == MAX_SONGS_ALLOWED) // check if playlist has reached limit
-		return 2;
-
-	for (i = 0; i < (*ptr).numOfSongs; i++){		// check if song is already in playlist
-		if (s.songId == ((*ptr).list[i]))
-			return 1;
-	}
-
-	(*ptr).list[(*ptr).numOfSongs] = s.songId;		// add song to end of playlist
-	(*ptr).numOfSongs++;
-	return 0;
-}
-
-int removeFromPlaylist(Song s, PlaylistPtr ptr){
-	int i;
-	int temp;
-	if ((*ptr).numOfSongs == 0) // check if playlist is empty
-		return 1;
-
-	/*
-	 * IMPLEMENTATION NOTE: removing song by brute force right now
-	 * 						could switch to use recursion later on.
-	 */
-	for (i = 0; i < (*ptr).numOfSongs; i++){		// check if song is in playlist
-		if (s.songId == ((*ptr).list[i])){
-			temp = i;
-			i = (*ptr).numOfSongs;
-		}
-	}
-	for (i = temp; i < (*ptr).numOfSongs; i++){	// shift songs 1 over
-		if (i == ((*ptr).numOfSongs - 1))
-			(*ptr).list[i] = 0;
-		else
-			(*ptr).list[i] = (*ptr).list[i+1];
-	}
-
-	(*ptr).numOfSongs--;
-	return 0;
-}
 
 int main()
 {
+	songLibrary = createPlaylist();
+	getSongFromSD();
+	//////////////////////// SETUP AUDIO //////////////////////////////////////////////
+	audio_configs_setup();
+	if (copysongfromsd("FFI.wav") != 1) {
+			printf("error in loading song");
+	}
+
+	random = 0;
+	alt_up_audio_enable_write_interrupt(audio);
+	alt_irq_register(AUDIO_0_IRQ, 0, (void*) audioISR);
+	alt_irq_enable(AUDIO_0_IRQ);
+
+	printf("%d\n", songLibrary.numOfSongs);
+
+	while(1);
 
 	return 0;
 }
