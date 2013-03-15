@@ -52,9 +52,9 @@ typedef SongHeader* SongHeaderPtr;
 struct music{
 	unsigned short int songId; // unique numerical id to identify a song [ 0 == dummy song | songId > 0 == actual song]
 	char* songName;
-	int songState;			   // state of the song (i.e. 2 == playing, 1 == paused, 0 == stopped,)
+	unsigned short int songState;	// state of the song (i.e. 2 == playing, 1 == paused, 0 == stopped,)
 	unsigned char* songBuffer; // ***** not sure if we need this in the struct *****
-	int songSize;			   // ***** not sure if we need this in the struct *****
+	unsigned int songSize;			   // ***** not sure if we need this in the struct *****
 	SongHeader header;
 };
 typedef struct music Song;
