@@ -14,8 +14,10 @@
 #include "altera_up_sd_card_avalon_interface.h"
 #include "altera_up_avalon_audio_and_video_config.h"
 #include "altera_up_avalon_audio.h"
+#include "sys/alt_irq.h"
 #include <string.h>
 #include "system.h"
+
 
 //typedef int bool;
 #define true 1
@@ -38,7 +40,7 @@ typedef struct music Song;
 struct pList {
 	unsigned short int numOfSongs;
 	Song list[MAX_SONGS_ALLOWED]; 	// limit to a maximum number of songs allowed for now...
-	unsigned short int order[MAX_SONGS_ALLOWED]
+	unsigned short int order[MAX_SONGS_ALLOWED];
 	unsigned short int currentSong;
 
 };

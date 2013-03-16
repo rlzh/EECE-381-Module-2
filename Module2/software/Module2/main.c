@@ -62,8 +62,9 @@ void loadSongFromSd (char* filename, unsigned char *memorybuffer){
 			}
 
 			sizeoffile = ((headerfile[4+4]<<6)|(headerfile[7]<<4)|(headerfile[6]<<2)|headerfile[5])-38;
-			*memorybuffer = (unsigned char*) malloc(sizeoffile + 96
+			memorybuffer = (unsigned char*) malloc(sizeoffile + 96
 								* sizeof(unsigned char));
+
 			for (temp = 0; temp < sizeoffile; temp ++)
 			{
 				short ret = alt_up_sd_card_read(handle);
@@ -190,7 +191,15 @@ char* receiveFromAndroid(){
 
 int main()
 {
-	
+	unsigned char* mem_buffer;
+	//////////////////////// SETUP AUDIO //////////////////////////////////////////////
+		audio_configs_setup();
+		loadSongFromSd("ZELDA.WAV", soundbuffer);
+		random = 0;
+		alt_up_audio_enable_write_interrupt(audio);
+
+		alt_irq_register(AUDIO_0_IRQ, 0, (void*) audioISR);
+		alt_irq_enable(AUDIO_0_IRQ);
         return 0;
 }
 
