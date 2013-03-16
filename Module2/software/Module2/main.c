@@ -25,10 +25,10 @@ alt_up_audio_dev* audio;
 
 
 
-void loadSongFromSd (char filen, unsigned char *memorybuffer){
+void loadSongFromSd (char* filename, unsigned char *memorybuffer){
 	int handle;
 	alt_up_sd_card_dev *device_sd = NULL;
-	char filename[40] = filen;
+	//char filename[40] = filen;
 	int connect = 0;
 	int headerfile[44];
 	int temp = 0;
