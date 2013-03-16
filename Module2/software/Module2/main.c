@@ -24,17 +24,16 @@ alt_up_audio_dev* audio;
  */
 
 
-int copysongfromsd() {
+
+void loadSongFromSd (char filen, unsigned char *memorybuffer){
 	int handle;
-	alt_up_sd_card_dev* device_sd = NULL;
-	char filename[15] = "ZELDA.wav";
-	int header = 44;
+	alt_up_sd_card_dev *device_sd = NULL;
+	char filename[40] = filen;
 	int connect = 0;
-	int songsize = 0;
-
-
-	device_sd = alt_up_sd_card_open_dev(ALTERA_UP_SD_CARD_AVALON_INTERFACE_0_NAME);
-
+	int headerfile[44];
+	int temp = 0;
+	int sizeoffile;
+	device_sd = alt_up_sd_card_open_dev("/dev/Altera_UP_SD_Card_Avalon_Interface_0");
 	if (device_sd != NULL) {
 
 		if ((connect == 0) && (alt_up_sd_card_is_Present())) {
@@ -46,7 +45,6 @@ int copysongfromsd() {
 				return 0;
 			}
 
-			// OPENS FILE
 			handle = alt_up_sd_card_fopen(filename, false);
 			if (handle >= 0) {
 				printf("%s successfully opened!\n", filename);
@@ -55,19 +53,23 @@ int copysongfromsd() {
 				printf("Error opening %s\n", filename);
 			}
 
-			soundbuffer = (unsigned char*) malloc(songsize + 96* sizeof(unsigned char));
-			if (soundbuffer == NULL) {
-				printf("malloc failed");
-			}
-			int temp;
-			for (temp = 0; temp < header; temp++) {
-				alt_up_sd_card_read(handle);
 
-			}
-			for (temp = 0; temp < songsize; temp++) {
+			for (temp = 0; temp <44; temp ++)
+			{
 				short ret = alt_up_sd_card_read(handle);
-				assert(ret >= 0);
-				soundbuffer[temp] = ret;
+				assert (ret > 0);
+				headerfile[temp] = ret;
+			}
+
+			sizeoffile = ((headerfile[4+4]<<6)|(headerfile[7]<<4)|(headerfile[6]<<2)|headerfile[5])-38;
+			*memorybuffer = (unsigned char*) malloc(sizeoffile + 96
+								* sizeof(unsigned char));
+			for (temp = 0; temp < sizeoffile; temp ++)
+			{
+				short ret = alt_up_sd_card_read(handle);
+				assert (ret > 0);
+				memorybuffer[temp] = ret;
+
 			}
 
 			if (alt_up_sd_card_fclose(handle) != -1) {
@@ -78,6 +80,7 @@ int copysongfromsd() {
 			}
 			connect = 1;
 
+			//printf("after loading soundbuffer \n");
 		}
 
 		else if ((connect == 1) && (alt_up_sd_card_is_Present() == false)) {
@@ -85,7 +88,9 @@ int copysongfromsd() {
 			return -1;
 		}
 	}
+	//printf("before return");
 	return 1;
+
 }
 
 void audio_configs_setup(void) {
