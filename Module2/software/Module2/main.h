@@ -46,7 +46,7 @@ struct pList {
 };
 typedef struct pList Playlist;
 
-int copysongfromsd();
+void loadSongFromSd (char* filename, unsigned char *memorybuffer);
 void SoundEISR (void * test, unsigned int ID_irq);
 void audioISR(void * context, unsigned int ID_IRQ);
 void sendToAndroid( char* message);

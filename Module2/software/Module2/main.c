@@ -15,7 +15,7 @@
 unsigned char *soundbuffer;
 unsigned int sam[96];
 int random ;
-int songsize;
+int songsize=2000000;
 const int bufferconst = 96;
 alt_up_audio_dev* audio;
 
@@ -24,16 +24,16 @@ alt_up_audio_dev* audio;
  */
 
 
-
 void loadSongFromSd (char* filename, unsigned char *memorybuffer){
 	int handle;
 	alt_up_sd_card_dev *device_sd = NULL;
-	//char filename[40] = filen;
+	short header[44];
 	int connect = 0;
-	int headerfile[44];
-	int temp = 0;
-	int sizeoffile;
-	device_sd = alt_up_sd_card_open_dev("/dev/Altera_UP_SD_Card_Avalon_Interface_0");
+	long int size_of_file;
+
+
+	device_sd = alt_up_sd_card_open_dev(
+			"/dev/Altera_UP_SD_Card_Avalon_Interface_0");
 	if (device_sd != NULL) {
 
 		if ((connect == 0) && (alt_up_sd_card_is_Present())) {
@@ -45,34 +45,34 @@ void loadSongFromSd (char* filename, unsigned char *memorybuffer){
 				return 0;
 			}
 
-			handle = alt_up_sd_card_fopen(filename, false);
-			if (handle >= 0) {
+			if ((handle = alt_up_sd_card_fopen(filename, false))>= 0) {
 				printf("%s successfully opened!\n", filename);
-				printf("Loading %s.", filename);
+				printf("Loading %s.\n", filename);
 			} else {
 				printf("Error opening %s\n", filename);
 			}
 
-
-			for (temp = 0; temp <44; temp ++)
-			{
+			int temp;
+			for (temp = 0; temp < 44; temp++) {
 				short ret = alt_up_sd_card_read(handle);
-				assert (ret > 0);
-				headerfile[temp] = ret;
+				assert(ret >= 0);
+				header[temp] = ret;
 			}
 
-			sizeoffile = ((headerfile[4+4]<<6)|(headerfile[7]<<4)|(headerfile[6]<<2)|headerfile[5])-38;
-			memorybuffer = (unsigned char*) malloc(sizeoffile + 96
+			size_of_file = (header[43]<<24|header[42]<<16|header[41]<<8|header[40]);
+			printf("size of file: %ld\n", size_of_file);
+			songsize = size_of_file;
+			soundbuffer = (unsigned char*) malloc(songsize + 96
 								* sizeof(unsigned char));
-
-			for (temp = 0; temp < sizeoffile; temp ++)
-			{
+			if (soundbuffer == NULL) {
+				printf("malloc failed");
+			}
+			for (temp = 0; temp < songsize; temp++) {
 				short ret = alt_up_sd_card_read(handle);
-				assert (ret > 0);
-				memorybuffer[temp] = ret;
+				assert(ret >= 0);
+				soundbuffer[temp] = ret;
 
 			}
-
 			if (alt_up_sd_card_fclose(handle) != -1) {
 				printf("File %s closed.\n", filename);
 			} else {
@@ -81,7 +81,6 @@ void loadSongFromSd (char* filename, unsigned char *memorybuffer){
 			}
 			connect = 1;
 
-			//printf("after loading soundbuffer \n");
 		}
 
 		else if ((connect == 1) && (alt_up_sd_card_is_Present() == false)) {
@@ -89,10 +88,9 @@ void loadSongFromSd (char* filename, unsigned char *memorybuffer){
 			return -1;
 		}
 	}
-	//printf("before return");
 	return 1;
-
 }
+
 
 void audio_configs_setup(void) {
 	alt_up_av_config_dev * av_config = alt_up_av_config_open_dev(AUDIO_AND_VIDEO_CONFIG_0_NAME);
@@ -191,10 +189,10 @@ char* receiveFromAndroid(){
 
 int main()
 {
-	unsigned char* mem_buffer;
 	//////////////////////// SETUP AUDIO //////////////////////////////////////////////
 		audio_configs_setup();
 		loadSongFromSd("ZELDA.WAV", soundbuffer);
+
 		random = 0;
 		alt_up_audio_enable_write_interrupt(audio);
 
