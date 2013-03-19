@@ -17,6 +17,7 @@
 #include "sys/alt_irq.h"
 #include <string.h>
 #include "system.h"
+#include "utilities.h"
 
 
 //typedef int bool;
@@ -25,13 +26,22 @@
 
 // CONSTANTS DECLARATION
 
-#define MAX_SONGS_ALLOWED 20
+#define MAX_SONGS_ALLOWED 	50
+#define BUFFER_SIZE		  	65534
+#define SAMPLE_BUFFER_SIZE	96
+#define IDLE				0
+#define PLAY 				1
+#define PAUSE				2
+#define PREV				3
+#define RWD					4
+#define FWD					5
+#define NEXT				6
 
 
 struct music{
 	unsigned short int songId; // unique numerical id to identify a song
 	char* songName;
-	int songSize;
+	unsigned long int songSize;
 	unsigned char* songBuffer;
 };
 typedef struct music Song;
@@ -46,10 +56,14 @@ struct pList {
 };
 typedef struct pList Playlist;
 
-void loadSongFromSd (char* filename, unsigned char *memorybuffer);
-void SoundEISR (void * test, unsigned int ID_irq);
+
+void loadSongHeader(char* fname);
+int loadSongBuffer();
+int playSong(char* file_name);
+
+void songManager(char* command);
+void adjustVolume(int new_volume);
+void audio_configs_setup(void);
 void audioISR(void * context, unsigned int ID_IRQ);
-void sendToAndroid( char* message);
-char* receiveFromAndroid();
 
 #endif /* MAIN_H_ */
