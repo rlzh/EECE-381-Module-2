@@ -44,31 +44,29 @@ char* receiveFromAndroid() {
 	short int i;
 	unsigned char data;
 	unsigned char parity;
+	unsigned char* message;
 
 	printf("UART Initialization\n");
 	alt_up_rs232_dev* uart = alt_up_rs232_open_dev(RS232_0_NAME);
 
-	printf("Clearing read buffer to start\n");
-	while (alt_up_rs232_get_used_space_in_read_FIFO(uart)) {
-		alt_up_rs232_read_data(uart, &data, &parity);
-	}
 	printf("Waiting for data to come from the Middleman\n");
-	while (alt_up_rs232_get_used_space_in_read_FIFO(uart) == 0);
-
-	// First byte is the number of characters in our message
-
-	alt_up_rs232_read_data(uart, &data, &parity);
-	int num_to_receive = (int) data;
-	char* message = malloc(num_to_receive * sizeof(char));
-
-	printf("About to receive %d characters:\n", num_to_receive);
-	for (i = 0; i < num_to_receive; i++) {
-		while (alt_up_rs232_get_used_space_in_read_FIFO(uart) == 0);
-		alt_up_rs232_read_data(uart, &data, &parity);
-		message[i] = data;
-		printf("%c", data);
+	if (alt_up_rs232_get_used_space_in_read_FIFO(uart) == 0){
+		return "nothing";
 	}
+	else {
+		// First byte is the number of characters in our message
+		alt_up_rs232_read_data(uart, &data, &parity);
+		int num_to_receive = (int) data;
+		message = malloc(num_to_receive * sizeof(unsigned char));
 
+		printf("About to receive %d characters:\n", num_to_receive);
+		for (i = 0; i < num_to_receive; i++) {
+			while (alt_up_rs232_get_used_space_in_read_FIFO(uart) == 0);
+			alt_up_rs232_read_data(uart, &data, &parity);
+			message[i] = data;
+			printf("%c", data);
+		}
+	}
 	return message;
 }
 
@@ -107,5 +105,33 @@ void loadSongInfo(char** song_info){
 	return;
 }
 
+void parseCommand(char* command, int* state, int* volume, char* file_name){
+	char* temp='\0';
+	int i=0;
+	while(strcmp(&command[i],",")!= 0){
+		strcat(temp,&command[i]);
+		i++;
+	}
+	*volume = atoi(temp);
+	printf("volume : %d\n", *volume);
+	temp='\0';
+	i++;
+	while(strcmp(&command[i],",")!= 0){
+		strcat(temp,&command[i]);
+		i++;
+	}
+	i++;
+	*state = atoi(temp);
+	printf("state : %d\n", *state);
+	temp='\0';
+	while(strcmp(&command[i],"=")!= 0){
+		strcat(temp,&command[i]);
+		i++;
+	}
+	*file_name = atoi(temp);
+	printf("fname : %d\n", *file_name);
+	temp='\0';
+	return;
+}
 
 

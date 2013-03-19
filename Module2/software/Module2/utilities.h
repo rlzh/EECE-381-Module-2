@@ -19,10 +19,9 @@
 #include "system.h"
 #include "main.h"
 
-
-
-void loadSongInfo(char** song_info);
 void sendToAndroid( char* message);
 char* receiveFromAndroid();
+void loadSongInfo(char** song_info);
+void parseCommand(char* command, int* state, int* volume, char* file_name);
 
 #endif /* UTILITIES_H_ */

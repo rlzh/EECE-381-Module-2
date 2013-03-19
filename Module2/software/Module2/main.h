@@ -61,9 +61,12 @@ void loadSongHeader(char* fname);
 int loadSongBuffer();
 int playSong(char* file_name);
 
-void songManager(char* command);
 void adjustVolume(int new_volume);
 void audio_configs_setup(void);
 void audioISR(void * context, unsigned int ID_IRQ);
+
+void uart_configs_setup(void);
+void androidListenerISR(void * context, unsigned int ID_IRQ);
+
 
 #endif /* MAIN_H_ */
