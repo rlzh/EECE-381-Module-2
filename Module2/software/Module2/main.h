@@ -67,6 +67,7 @@ void audioISR(void * context, unsigned int ID_IRQ);
 
 void uart_configs_setup(void);
 void androidListenerISR(void * context, unsigned int ID_IRQ);
+void volumecontrol(unsigned int *buf, int volumenum, int buffersize);
 
 
 #endif /* MAIN_H_ */

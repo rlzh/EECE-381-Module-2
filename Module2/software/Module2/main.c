@@ -147,20 +147,9 @@ void audioISR(void * context, unsigned int ID_IRQ) {
 		buf = buf2;
 	}
 	for (temp = 0; temp < bufferconst; temp++){
-		if (volume == 1){
-			sam[temp] = (unsigned int)((buf[buf_index + 1] << 8) | buf[buf_index]) << 8;
-		}
-		else if(volume == 2){
-			sam[temp] = (unsigned int)((buf[buf_index + 1] << 8) | buf[buf_index]) << 9;
 
-		}
-		else if(volume == 3){
-			sam[temp] = (unsigned int)((buf[buf_index + 1] << 8) | buf[buf_index]) << 10;
-		}
-		else if(volume == 4){
-			sam[temp] = (unsigned int)((buf[buf_index + 1] << 8) | buf[buf_index]) << 11;
-		}
-		buf_index += 2;
+			sam[temp] = (unsigned int)((buf[buf_index + 1] << 8) | buf[buf_index]) << 8;
+			buf_index += 2;
 
 		if((buf_flag == 2 && buf_index >= buf1_count)){ // buffer 1 is empty
 			buf_index = 0;
@@ -173,9 +162,75 @@ void audioISR(void * context, unsigned int ID_IRQ) {
 			buf_flag = 2;
 		}
 	}
+	volumecontrol (sam,volume,96);
 	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_LEFT);
 	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
 }
+
+void volumecontrol(unsigned int *buf, int volumenum, int buffersize) {
+	int i;
+
+	for (i = 0; i < buffersize; i++) {
+		if (volume == 2)
+		{
+			if (buf[i] == 0x007FFFFF)
+			{
+				buf [i] = 0x007FFFFF;
+			}
+			else
+			{
+			buf[i] = buf[i] << 2;
+			}
+		}
+		if (volume == 1)
+		{
+			if (buf[i] == 0x007FFFFF)
+			{
+							buf [i] = 0x007FFFFF;
+			}
+			else
+			{
+			buf[i] = buf[i] << 1;
+			}
+		}
+		if (volume == 0)
+		{
+			buf[i] = buf [i];
+		}
+		if (volume == -1) {
+			if (buf[i] >= 0x00800000) {
+				buf[i] = buf[i] >> 1;
+				buf[i] = (buf[i] | 0x00800000);
+			} else {
+				buf[i] = buf[i] >> 1;
+			}
+			}
+			if (volume == -2) {
+				if (buf[i] >= 0x00800000) {
+					buf[i] = buf[i] >> 2;
+					buf[i] = (buf[i] | 0x00C00000);// & 0x00DFFFFF;
+					} else {
+					buf[i] = buf[i] >> 2;
+					}
+			}
+			if (volume == -3){
+				if (buf[i] >= 0x00800000) {
+					buf[i] = buf[i] >> 3;
+					buf[i] = (buf[i] | 0x00E00000);
+					} else {
+					buf[i] = buf[i] >> 3;
+					}
+			}
+			if (volume == -4){
+					if (buf[i] >= 0x00800000) {
+						buf[i] = buf[i] >> 4;
+						buf[i] = (buf[i] | 0x00F00000);
+						} else {
+						buf[i] = buf[i] >> 4;
+						}
+				}
+		}
+	}
 
 void uart_configs_setup(void){
 	printf("UART Initialization\n");
