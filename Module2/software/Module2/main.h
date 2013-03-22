@@ -25,9 +25,8 @@
 #define false 0
 
 // CONSTANTS DECLARATION
-
-#define MAX_SONGS_ALLOWED 	50
-#define BUFFER_SIZE		  	65534
+#define MAX_FNAME_LENGTH	8
+#define BUFFER_SIZE		  	65536
 #define SAMPLE_BUFFER_SIZE	96
 #define IDLE				0
 #define PLAY 				1
@@ -38,36 +37,16 @@
 #define NEXT				6
 
 
-struct music{
-	unsigned short int songId; // unique numerical id to identify a song
-	char* songName;
-	unsigned long int songSize;
-	unsigned char* songBuffer;
-};
-typedef struct music Song;
-
-
-struct pList {
-	unsigned short int numOfSongs;
-	Song list[MAX_SONGS_ALLOWED]; 	// limit to a maximum number of songs allowed for now...
-	unsigned short int order[MAX_SONGS_ALLOWED];
-	unsigned short int currentSong;
-
-};
-typedef struct pList Playlist;
-
-
 void loadSongHeader(char* fname);
 int loadSongBuffer();
 int playSong(char* file_name);
+void songManager(void);
 
-void adjustVolume(int new_volume);
 void audio_configs_setup(void);
 void audioISR(void * context, unsigned int ID_IRQ);
 
 void uart_configs_setup(void);
 void androidListenerISR(void * context, unsigned int ID_IRQ);
-void volumecontrol(unsigned int *buf, int volumenum, int buffersize);
 
 
 #endif /* MAIN_H_ */
