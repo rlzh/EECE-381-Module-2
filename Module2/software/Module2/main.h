@@ -18,6 +18,7 @@
 #include <string.h>
 #include "system.h"
 #include "utilities.h"
+#include "altera_avalon_timer.h"
 
 
 //typedef int bool;
@@ -26,7 +27,7 @@
 
 // CONSTANTS DECLARATION
 #define MAX_FNAME_LENGTH	8
-#define BUFFER_SIZE		  	65536
+#define BUFFER_SIZE		  	64000
 #define SAMPLE_BUFFER_SIZE	96
 #define IDLE				0
 #define PLAY 				1
@@ -37,8 +38,8 @@
 #define NEXT				6
 
 
-void loadSongHeader(char* fname);
-int loadSongBuffer();
+void loadSong(char* fname, int index);
+int loadBuffer();
 int playSong(char* file_name);
 void songManager(void);
 

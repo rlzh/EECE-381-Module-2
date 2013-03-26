@@ -11,7 +11,6 @@
  *  GLOBAL VARIABLES DECLARATION BEGIN
  */
 char* file_names[MAX_SONGS_ALLOWED];
-int file_count;
 
 volatile char* command;
 volatile short int state;
@@ -20,13 +19,16 @@ volatile short int volume;
 volatile unsigned int file_id;
 //char* file_name;
 
-unsigned char buf1[65536];
-unsigned char buf2[65536];
+unsigned int song_size;
+unsigned int song_index;
+
+unsigned char buf1[BUFFER_SIZE];
+unsigned char buf2[BUFFER_SIZE];
 volatile int buf_flag;
 volatile int buf_index;
-int song_size;
 int buf2_count;
 int buf1_count;
+
 const int bufferconst = 96;
 unsigned int sam[96];
 
@@ -40,10 +42,10 @@ alt_up_rs232_dev* uart;
  */
 
 
-void loadSongHeader(char* fname) {
+void loadSong(char* fname, int index) {
 	short header[44];
-	int size_of_file;
-	int sample_rate;
+	unsigned int size_of_file;
+	//int sample_rate;
 	int song_index;
 	sd = NULL;
 	sd = alt_up_sd_card_open_dev("/dev/Altera_UP_SD_Card_Avalon_Interface_0");
@@ -54,26 +56,26 @@ void loadSongHeader(char* fname) {
 			return;
 		}
 	}
-	for (song_index = 0; song_index < 44; song_index++) { // read header file
+	for (song_index = 0; song_index < index; song_index++) { // read header file
 		short ret = alt_up_sd_card_read(handle);
 		assert(ret >= 0);
 		header[song_index] = ret;
 	}
-	sample_rate = (header[27] << 24 | header[26] << 16 | header[25] << 8 | header[24]);
+	//sample_rate = (header[27] << 24 | header[26] << 16 | header[25] << 8 | header[24]);
 	//printf("sample rate: %ld\n", sample_rate);
 
 	// calculate size of file
 	size_of_file = (header[43] << 24 | header[42] << 16 | header[41] << 8 | header[40]);
-	//printf("size of file: %d\n", size_of_file);
+	printf("size of file: %d\n", size_of_file); //debug
 	song_size = size_of_file;
 	return;
 }
 
-int loadSongBuffer() {
+int loadBuffer() {
 	unsigned char* buf;
 	int temp;
 	short ret;
-
+	unsigned int i;
 	if (buf_flag == 1){
 		buf = buf1;
 	}
@@ -82,6 +84,7 @@ int loadSongBuffer() {
 	}
 	for (temp = 0;temp < BUFFER_SIZE; temp++){
 		ret = alt_up_sd_card_read(handle);
+		i++;
 		if (ret < 0){
 			if(buf_flag == 1)
 				buf1_count = temp;
@@ -100,7 +103,8 @@ int loadSongBuffer() {
 		}
 		if (state == NEXT || state == PREV){
 			printf("\nnext|prev in loadSongBuffer()\n");
-			alt_irq_disable(AUDIO_0_IRQ);
+			if (state_old != PAUSE)
+				alt_irq_disable(AUDIO_0_IRQ);
 			buf1_count = 0;
 			buf2_count = 0;
 			return 2;
@@ -116,9 +120,19 @@ int loadSongBuffer() {
 }
 
 
-int playSong(char* f_name){
+int playSong(char* fname){
 
-	loadSongHeader(f_name);
+	loadSong(fname,44);
+	loadSong(fname,44);// <-- call twice to make sure no but in reading
+
+	int temp = calcSongLength(song_size);
+	char* song_length = malloc(20*sizeof(char));
+	// use this to convert to string since the libraries
+	// here do not include 'itoa()'
+	snprintf(song_length, sizeof(song_length), "%d", temp);
+	printf("\nsong_length: %s seconds\n", song_length);//debug
+	//sendToAndroid(song_length);
+	free(song_length);
 
 	int end_of_song = 0;
 	int buf_flag_old;
@@ -127,26 +141,26 @@ int playSong(char* f_name){
 	buf_index = 0;
 	buf_flag = 1;
 
-	loadSongBuffer();
+	loadBuffer();
 	alt_irq_enable(AUDIO_0_IRQ);
 
 	buf_flag = 2;
 	buf_flag_old = buf_flag;
 	unsigned int i=0;
 	while(1){
-		//printfs for debug
-		//printf("iteration : %d\n", i);
+		//printf("iteration : %d\n", i); // debugging
 		//printf("volume : %d\n", volume);
 		//printf("state : %d\n", state);
 		//printf("fid : %d\n", file_id);
-		alt_irq_enable(AUDIO_0_IRQ);	// <----- adding these 3 fixes glitches but why?????
+		alt_irq_enable(AUDIO_0_IRQ);	// <----- adding these 3 fixes glitches but why???
 		alt_irq_enable(AUDIO_0_IRQ);	// <-----
 		alt_irq_enable(AUDIO_0_IRQ);	// <-----
+
 		if(state == IDLE && state_old!=IDLE){
 			state = state_old;
 		}
 		if (state == PLAY){
-			end_of_song = loadSongBuffer();
+			end_of_song = loadBuffer();
 			while (buf_flag == buf_flag_old){
 				if(state == NEXT || state == PREV){
 					buf_flag = abs(3-buf_flag_old);
@@ -177,7 +191,7 @@ int playSong(char* f_name){
 			alt_irq_disable(AUDIO_0_IRQ);
 			break;
 		}
-		i++;
+		i++; // debug
 	}
 	return 0;
 }
@@ -191,8 +205,7 @@ void songManager(void){
 			if (state == PLAY){ // play song
 				printf("\nplay song songManager()\n");
 				state_old = state;
-				// get file name
-				f_name = getFileName(file_names, file_id);
+				f_name = getFileName(file_names, file_id); // get file name
 				playSong(f_name);
 			}
 			else if(state == NEXT){ // play next song
@@ -231,7 +244,6 @@ void audio_configs_setup(void) {
 }
 
 void audioISR(void * context, unsigned int ID_IRQ) {
-	int temp;
 	int i;
 	unsigned char* buf;
 	if(buf_flag == 2){
@@ -240,9 +252,9 @@ void audioISR(void * context, unsigned int ID_IRQ) {
 	else {
 		buf = buf2;
 	}
-	for (temp = 0; temp < bufferconst; temp++){
-		sam[temp] = (unsigned int)((buf[buf_index + 1] << 8) | buf[buf_index]) << 8;
-		buf_index += 2;
+	for (i = 0; i < bufferconst; i++){
+		sam[i] = (unsigned int)((buf[buf_index + 1] << 8) | buf[buf_index]) << 8;
+		buf_index += 2; // increasing this makes sound higher octave
 
 		if((buf_flag == 2 && buf_index >= buf1_count)){ // buffer 1 is empty
 			buf_index = 0;
@@ -255,61 +267,7 @@ void audioISR(void * context, unsigned int ID_IRQ) {
 			buf_flag = 2;
 		}
 	}
-	//volumecontrol(sam,&volume,96);
-	/*
-	 * NOTE: moved volumecontrol here because I declared 'sam' to be volatile
-	 * 		 something to do with letting things other than this code(i.e. the interrupts)
-	 * 		 to modify variables in the code. I'm not too sure about this though.
-	 * 		 Will ask Jeff about this on Tuesday.
-	 */
-	for (i = 0; i < bufferconst; i++) {
-		if (volume == 2){
-			if (sam[i] == 0x007FFFFF)
-				sam [i] = 0x007FFFFF;
-			else
-				sam[i] = sam[i] << 2;
-		}
-		if (volume == 1){
-			if (sam[i] == 0x007FFFFF)
-				sam [i] = 0x007FFFFF;
-			else
-				sam[i] = sam[i] << 1;
-		}
-		if (volume == 0)
-			sam[i] = sam [i];
-		if (volume == -1) {
-			if (sam[i] >= 0x00800000) {
-				sam[i] = sam[i] >> 1;
-				sam[i] = (sam[i] | 0x00800000);
-			} else {
-				sam[i] = sam[i] >> 1;
-			}
-		}
-		if (volume == -2) {
-			if (sam[i] >= 0x00800000) {
-				sam[i] = sam[i] >> 2;
-				sam[i] = (sam[i] | 0x00C00000);// & 0x00DFFFFF;
-			} else {
-				sam[i] = sam[i] >> 2;
-			}
-		}
-		if (volume == -3){
-			if (sam[i] >= 0x00800000) {
-				sam[i] = sam[i] >> 3;
-				sam[i] = (sam[i] | 0x00E00000);
-			} else {
-				sam[i] = sam[i] >> 3;
-			}
-		}
-		if (volume == -4){
-			if (sam[i] >= 0x00800000) {
-				sam[i] = sam[i] >> 4;
-				sam[i] = (sam[i] | 0x00F00000);
-			} else {
-				sam[i] = sam[i] >> 4;
-			}
-		}
-	}
+	volumecontrol(sam,&volume,bufferconst);
 
 	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_LEFT);
 	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
@@ -329,11 +287,14 @@ void androidListenerISR(void * context, unsigned int ID_IRQ){
 		alt_up_rs232_read_data(uart, &data, &parity);
 	}
 	parseCommand(command, &volume, &state, &file_id);
+	//parseCommand(command, &volume, &state, &file_id, &song_index);
+
 }
 
 
 int main() {
 	int i;
+	int file_count;
 	// initialize global variables
 	volume = 0;
 	state = IDLE;

@@ -69,42 +69,7 @@ char* receiveFromAndroid() {
 	}
 	return (char*) message;
 }
-/*
-void loadSongInfo(char** song_info){
-	short int file_size = 0;
-	short int ret;
-	int handle;
-	alt_up_sd_card_dev* sd = NULL;
-	sd = alt_up_sd_card_open_dev("/dev/Altera_UP_SD_Card_Avalon_Interface_0");
 
-	if (sd != NULL && alt_up_sd_card_is_Present() && alt_up_sd_card_is_FAT16()) {
-		printf("Card connected.\n");
-		if ((handle = alt_up_sd_card_fopen("INFO.TXT", false))>=0){
-			while ( (ret = alt_up_sd_card_read(handle)) >=0 ){
-				file_size++;
-			}
-			alt_up_sd_card_fclose(handle);
-		}
-		//printf("file size %d\n", file_size);
-		*song_info = malloc(file_size*sizeof(char));
-		*song_info[0] = '\0';
-		if (song_info == NULL)
-			return;
-		if ((handle = alt_up_sd_card_fopen("INFO.TXT", false))>=0){
-			while ( (ret = alt_up_sd_card_read(handle)) >=0 ){
-				//printf("%c", (char)ret);
-				strcat(*song_info,&ret);
-			}
-			alt_up_sd_card_fclose(handle);
-		}
-		else {
-			printf("error opening file\n");
-		}
-	}
-	//printf("song info from func\n%s\n", *song_info);
-	return;
-}
-*/
 void loadSongInfo(){
 	short int file_size = 0; // # of bytes in INFO.txt
 	short int msg_size = 0;	// # of bytes being sent in msg
@@ -168,10 +133,10 @@ void loadSongInfo(){
 		}
 	}
 	//debug
-	printf("break point count: %d\n", break_point_count);
+	/*printf("break point count: %d\n", break_point_count);
 	for (temp = 0; temp < break_point_count; temp++){
 		printf("break point %d: %d\n", temp,break_points[temp]);
-	}
+	}*/
 	temp = 0;
 	/*
 	 * ITERATION 3 : send msg to Android based on 'break_points'
@@ -254,7 +219,8 @@ char* getFileName(char** file_names, int id){
 }
 
 void parseCommand(volatile char* command, volatile short int* volume,
-				  volatile short int* state,volatile unsigned int* file_id)
+				  volatile short int* state,volatile unsigned int* file_id/*,
+				  volatile unsigned int* song_index*/)
 {
 	int vol = atoi((char*)&command[0]);
 	if(vol >= 0 && vol < 14 )
@@ -273,11 +239,12 @@ void parseCommand(volatile char* command, volatile short int* volume,
 		*volume = 2;
 	*state = atoi((char*)&command[3]);
 	*file_id = (unsigned int) atoi((char*)&command[5]);
+	//*song_index = (unsigned int) atoi ((char*)&command[7]);
 	return;
 }
 
 
-void volumecontrol(unsigned int* buf, short int* volume, int buffersize) {
+void volumecontrol(unsigned int* buf, volatile short int* volume, int buffersize) {
 	int i;
 
 	for (i = 0; i < buffersize; i++) {
@@ -340,6 +307,10 @@ void volumecontrol(unsigned int* buf, short int* volume, int buffersize) {
 			}
 		}
 	}
+}
+
+int calcSongLength(unsigned int size_of_file){
+	return (int)(size_of_file / BYTES_PER_SECOND);
 }
 
 

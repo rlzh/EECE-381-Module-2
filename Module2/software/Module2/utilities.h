@@ -9,7 +9,6 @@
 #define UTILITIES_H_
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <assert.h>
 #include "altera_up_avalon_rs232.h"
 #include "altera_up_sd_card_avalon_interface.h"
@@ -23,6 +22,7 @@
 // CONSTANTS DECLARATION
 #define MAX_SONGS_ALLOWED		50
 #define MAX_BYTES_PER_MESSAGE	130
+#define BYTES_PER_SECOND		64000
 
 struct music{
 	unsigned short int songId; // unique numerical id to identify a song
@@ -55,11 +55,7 @@ void loadSongInfo();
 /*
  * loads song information from SD card and send it to Android
  */
-unsigned int calcSongLength(Song song);
-/*
- * calculates the length of 'song' and returns
- * the length in seconds
- */
+
 void setFileId(char** file_names, int* file_count);
 /*
  * stores all WAV files on SD card in 'file_names'
@@ -72,15 +68,21 @@ char* getFileName(char** file_names, int id);
  * if song is not found, returns empty string
  */
 void parseCommand(volatile char* command, volatile short int* volume,
-			      volatile short int* state, volatile unsigned int* file_id);
+			      volatile short int* state, volatile unsigned int* file_id/*,
+			      volatile unsigned int* song_index*/);
 /*
  * parse the commands received from Android into 'volume', 'state',
  * and 'file_id'
  */
 
-void volumecontrol(unsigned int *buf, short int* volumenum, int buffersize);
+void volumecontrol(unsigned int *buf, volatile short int* volumenum, int buffersize);
 /*
  * shifts bits in 'buf' accordingly to 'volumenum' to adjust volume of music
+ */
+
+int calcSongLength(unsigned int size_of_file);
+/*
+ * calculates and returns the length of a song given 'size_of_file'
  */
 
 
