@@ -309,8 +309,31 @@ void volumecontrol(unsigned int* buf, volatile short int* volume, int buffersize
 	}
 }
 
-int calcSongLength(unsigned int size_of_file){
-	return (int)(size_of_file / BYTES_PER_SECOND);
+unsigned int loadSong(char* fname,int* handle, int index) {
+	short header[44];
+	unsigned int size_of_file;
+	int i;
+	alt_up_sd_card_dev* sd = NULL;
+	sd = alt_up_sd_card_open_dev("/dev/Altera_UP_SD_Card_Avalon_Interface_0");
+	if (sd != NULL && alt_up_sd_card_is_Present() && alt_up_sd_card_is_FAT16()) {
+		*handle = alt_up_sd_card_fopen(fname, false);
+		assert(*handle >= 0);
+	}
+	for (i = 0; i < index; i++) { // read header file
+		short ret = alt_up_sd_card_read(*handle);
+		assert(ret >= 0);
+		header[i] = ret;
+	}
+	//int sample_rate = (header[27] << 24 | header[26] << 16 | header[25] << 8 | header[24]);
+	//printf("sample rate: %ld\n", sample_rate);
+	size_of_file = (header[43] << 24 | header[42] << 16 | header[41] << 8 | header[40]);
+	//printf("size of file: %d\n", song_size); //debug
+	return size_of_file;
 }
+
+unsigned int calcSongLength(unsigned int size_of_file){
+	return (unsigned int)(size_of_file / BYTES_PER_SECOND);
+}
+
 
 

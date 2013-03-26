@@ -17,10 +17,10 @@ volatile short int state;
 volatile short int state_old;
 volatile short int volume;
 volatile unsigned int file_id;
-//char* file_name;
+volatile unsigned int song_index;
+volatile short int dj_flag;
 
-unsigned int song_size;
-unsigned int song_index;
+short int song_sel; // use to select between 2 songs in DJ mode
 
 unsigned char buf1[BUFFER_SIZE];
 unsigned char buf2[BUFFER_SIZE];
@@ -32,44 +32,13 @@ int buf1_count;
 const int bufferconst = 96;
 unsigned int sam[96];
 
-int handle;
+int handle[2];
 alt_up_audio_dev* audio;
-alt_up_sd_card_dev* sd;
 alt_up_rs232_dev* uart;
 
 /*
  *  GLOBAL VARIABLES DECLARATION END
  */
-
-
-void loadSong(char* fname, int index) {
-	short header[44];
-	unsigned int size_of_file;
-	//int sample_rate;
-	int song_index;
-	sd = NULL;
-	sd = alt_up_sd_card_open_dev("/dev/Altera_UP_SD_Card_Avalon_Interface_0");
-	if (sd != NULL && alt_up_sd_card_is_Present() && alt_up_sd_card_is_FAT16()) {
-		if ((handle = alt_up_sd_card_fopen(fname, false)) >= 0) {
-		} else {
-			printf("Error opening %s\n", fname);
-			return;
-		}
-	}
-	for (song_index = 0; song_index < index; song_index++) { // read header file
-		short ret = alt_up_sd_card_read(handle);
-		assert(ret >= 0);
-		header[song_index] = ret;
-	}
-	//sample_rate = (header[27] << 24 | header[26] << 16 | header[25] << 8 | header[24]);
-	//printf("sample rate: %ld\n", sample_rate);
-
-	// calculate size of file
-	size_of_file = (header[43] << 24 | header[42] << 16 | header[41] << 8 | header[40]);
-	printf("size of file: %d\n", size_of_file); //debug
-	song_size = size_of_file;
-	return;
-}
 
 int loadBuffer() {
 	unsigned char* buf;
@@ -83,7 +52,7 @@ int loadBuffer() {
 		buf = buf2;
 	}
 	for (temp = 0;temp < BUFFER_SIZE; temp++){
-		ret = alt_up_sd_card_read(handle);
+		ret = alt_up_sd_card_read(handle[song_sel]);
 		i++;
 		if (ret < 0){
 			if(buf_flag == 1)
@@ -97,7 +66,7 @@ int loadBuffer() {
 			state_old = PAUSE;
 			printf("\npause in loadSongBuffer()\n");
 			alt_irq_disable(AUDIO_0_IRQ);
-			while (state == PAUSE);
+			while (state == PAUSE); // wait while song paused
 			if (state == PLAY)
 				alt_irq_enable(AUDIO_0_IRQ);
 		}
@@ -121,14 +90,13 @@ int loadBuffer() {
 
 
 int playSong(char* fname){
+	unsigned int temp;
+	temp = loadSong(fname, &handle[song_sel], song_index);
+	temp = loadSong(fname, &handle[song_sel], song_index);// call twice to make sure no garbage in reading
 
-	loadSong(fname,44);
-	loadSong(fname,44);// <-- call twice to make sure no but in reading
-
-	int temp = calcSongLength(song_size);
+	temp = calcSongLength(temp);
 	char* song_length = malloc(20*sizeof(char));
-	// use this to convert to string since the libraries
-	// here do not include 'itoa()'
+	// use this to convert int to string since the libraries do not include 'itoa()'
 	snprintf(song_length, sizeof(song_length), "%d", temp);
 	printf("\nsong_length: %s seconds\n", song_length);//debug
 	//sendToAndroid(song_length);
@@ -172,7 +140,7 @@ int playSong(char* fname){
 			state_old = PAUSE;
 			printf("\npause song play()\n "); //debug
 			alt_irq_disable(AUDIO_0_IRQ);
-			while (state == PAUSE);
+			while (state == PAUSE); // wait while song paused
 			if (state == PLAY){
 				alt_irq_enable(AUDIO_0_IRQ);
 			}
@@ -200,6 +168,9 @@ void songManager(void){
 	state_old = IDLE;
 	char* f_name;
 	while(1){
+		if (dj_flag == 1){
+			break;
+		}
 		if(state != state_old && state != IDLE){
 			printf("\nstate change\n");
 			if (state == PLAY){ // play song
@@ -232,6 +203,7 @@ void songManager(void){
 			}
 		}
 	}
+	return;
 }
 
 void audio_configs_setup(void) {
@@ -286,18 +258,24 @@ void androidListenerISR(void * context, unsigned int ID_IRQ){
 	while (alt_up_rs232_get_used_space_in_read_FIFO(uart)) {// clear read FIFO
 		alt_up_rs232_read_data(uart, &data, &parity);
 	}
-	parseCommand(command, &volume, &state, &file_id);
-	//parseCommand(command, &volume, &state, &file_id, &song_index);
-
+	if (dj_flag == 0){
+		parseCommand(command, &volume, &state, &file_id);
+		//parseCommand(command, &volume, &state, &file_id, &song_index);
+	}
+	else if(dj_flag == 1){
+		//TO-DO: implement parseCommandDJMode()
+	}
 }
-
 
 int main() {
 	int i;
 	int file_count;
-	// initialize global variables
+	///////////////////// INITIALIZE GLOBAL VARIABLES /////////////////////////////
 	volume = 0;
+	song_sel = 0;
+	dj_flag = 0;
 	state = IDLE;
+	song_index = 44;
 	for(i=0; i<MAX_SONGS_ALLOWED; i++){
 			file_names[i]= malloc(MAX_FNAME_LENGTH*sizeof(char));
 	}
@@ -323,23 +301,17 @@ int main() {
 	alt_up_audio_enable_write_interrupt(audio);
 	alt_irq_register(AUDIO_0_IRQ, 0, (void*) audioISR);
 
-	songManager();	// infinite loop
 
-	//hardcoded function
-	/*while(1){
-		printf("\nplay Song\n");
-		playSong("HUMAN.WAV");
-		//playSong("8BIT.WAV");
-		//playSong("ANIMALB.WAV");
-		//playSong("BREAKD.WAV");
-		playSong("HEYYA.WAV");
-		playSong("C2G.WAV");
-		//playSong("DYWC.WAV");
-		//playSong("SNOW.WAV");
-		playSong("FIN2DARK.WAV");
-		//playSong("MIA.WAV");
-		//playSong("TTSKY.WAV");
-	}*/
+	while(1){
+		songManager();	// infinite loop
+		//TO-DO: implement djManager()
+	}
+
+	/////////////////////// TESTING ///////////////////////////////////////////
+	int handle1;
+	int handle2;
+	dj_flag = 1;
+	loadSong("MIA.WAV",&handle1, 44);
 
 	return 0;
 }

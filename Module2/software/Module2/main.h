@@ -38,7 +38,6 @@
 #define NEXT				6
 
 
-void loadSong(char* fname, int index);
 int loadBuffer();
 int playSong(char* file_name);
 void songManager(void);

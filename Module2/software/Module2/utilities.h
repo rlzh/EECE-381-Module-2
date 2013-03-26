@@ -80,7 +80,10 @@ void volumecontrol(unsigned int *buf, volatile short int* volumenum, int buffers
  * shifts bits in 'buf' accordingly to 'volumenum' to adjust volume of music
  */
 
-int calcSongLength(unsigned int size_of_file);
+unsigned int loadSong(char* fname, int* handle, int index);
+
+
+unsigned int calcSongLength(unsigned int size_of_file);
 /*
  * calculates and returns the length of a song given 'size_of_file'
  */
