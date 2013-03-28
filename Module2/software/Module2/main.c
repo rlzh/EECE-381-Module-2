@@ -29,9 +29,22 @@ volatile int buf_index;
 int buf2_count;
 int buf1_count;
 
+//DualChannel
+unsigned char buf3[BUFFER_SIZE];
+unsigned char buf4[BUFFER_SIZE];
+volatile int buf_flag1;
+volatile int buf_index1;
+int buf2_count1;
+int buf1_count1;
+
+//Testing for mic not done yet
+alt_up_audio_dev* testmic;
+unsigned char microphone;
+unsigned int mic[96];
+
 const int bufferconst = 96;
 unsigned int sam[96];
-
+unsigned int sam1[96];
 int handle[2];
 alt_up_audio_dev* audio;
 alt_up_rs232_dev* uart;
@@ -218,11 +231,11 @@ void audio_configs_setup(void) {
 void audioISR(void * context, unsigned int ID_IRQ) {
 	int i;
 	unsigned char* buf;
-	if(buf_flag == 2){
-		buf = buf1;
+	if(buf_flag1 == 2){
+		buf = buf3;
 	}
 	else {
-		buf = buf2;
+		buf = buf4;
 	}
 	for (i = 0; i < bufferconst; i++){
 		sam[i] = (unsigned int)((buf[buf_index + 1] << 8) | buf[buf_index]) << 8;
@@ -245,6 +258,62 @@ void audioISR(void * context, unsigned int ID_IRQ) {
 	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
 }
 
+void dualchannelISR (void * context, unsigned int ID_IRQ)
+{
+	int i;
+		unsigned char* buf;
+		if(buf_flag == 2){
+			buf = buf1;
+		}
+		else {
+			buf = buf2;
+		}
+		for (i = 0; i < bufferconst; i++){
+			sam[i] = (unsigned int)((buf[buf_index + 1] << 8) | buf[buf_index]) << 8;
+			buf_index += 2; // increasing this makes sound higher octave
+
+			if((buf_flag == 2 && buf_index >= buf1_count)){ // buffer 1 is empty
+				buf_index = 0;
+				buf = buf2;
+				buf_flag = 1;
+			}
+			else if((buf_flag == 1 && buf_index >= buf2_count)){ // buffer 2 is empty
+				buf_index = 0;
+				buf = buf1;
+				buf_flag = 2;
+			}
+		}
+
+
+			unsigned char* bufD;
+			if(buf_flag1 == 2){
+				bufD = buf3;
+			}
+			else {
+				bufD = buf4;
+			}
+			for (i = 0; i < bufferconst; i++){
+				sam1[i] = (unsigned int)((buf[buf_index1 + 1] << 8) | buf[buf_index1]) << 8;
+				buf_index1 += 2; // increasing this makes sound higher octave
+
+				if((buf_flag1 == 2 && buf_index1 >= buf1_count)){ // buffer 1 is empty
+					buf_index1 = 0;
+					buf = buf2;
+					buf_flag = 1;
+				}
+				else if((buf_flag == 1 && buf_index1 >= buf2_count)){ // buffer 2 is empty
+					buf_index1 = 0;
+					buf = buf1;
+					buf_flag1 = 2;
+				}
+			}
+			volumecontrol(sam,&volume,bufferconst);
+			volumecontrol(sam1,&volume,bufferconst);
+			alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_LEFT);
+			alt_up_audio_write_fifo(audio, sam1, bufferconst, ALT_UP_AUDIO_RIGHT);
+
+}
+
 void uart_configs_setup(void){
 	printf("UART Initialization\n");
 	uart = alt_up_rs232_open_dev(RS232_0_NAME);
@@ -265,6 +334,16 @@ void androidListenerISR(void * context, unsigned int ID_IRQ){
 	else if(dj_flag == 1){
 		//TO-DO: implement parseCommandDJMode()
 	}
+}
+
+
+void Microphone (void)
+{
+	alt_up_audio_read_fifo(testmic,mic,96, ALT_UP_AUDIO_LEFT);
+	alt_up_audio_read_fifo(testmic,mic,96, ALT_UP_AUDIO_RIGHT);
+
+	alt_up_audio_write_fifo(audio, mic, bufferconst, ALT_UP_AUDIO_LEFT);
+	alt_up_audio_write_fifo(audio, mic, bufferconst, ALT_UP_AUDIO_RIGHT);
 }
 
 int main() {

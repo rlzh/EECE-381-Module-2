@@ -47,6 +47,6 @@ void audioISR(void * context, unsigned int ID_IRQ);
 
 void uart_configs_setup(void);
 void androidListenerISR(void * context, unsigned int ID_IRQ);
-
-
+void dualchannelISR (void * context, unsigned int ID_IRQ);
+void Microphone (void);
 #endif /* MAIN_H_ */
