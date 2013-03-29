@@ -21,26 +21,11 @@
 
 // CONSTANTS DECLARATION
 #define MAX_SONGS_ALLOWED		50
-#define MAX_BYTES_PER_MESSAGE	130
+#define MAX_BYTES_PER_MESSAGE	120
 #define BYTES_PER_SECOND		64000
 
-struct music{
-	unsigned short int songId; // unique numerical id to identify a song
-	char* songName;
-	unsigned long int songSize;
-	unsigned char* songBuffer;
-};
-typedef struct music Song;
 
 
-struct pList {
-	unsigned short int numOfSongs;
-	Song list[MAX_SONGS_ALLOWED]; 	// limit to a maximum number of songs allowed for now...
-	unsigned short int order[MAX_SONGS_ALLOWED];
-	unsigned short int currentSong;
-
-};
-typedef struct pList Playlist;
 
 
 void sendToAndroid(char* message);
@@ -80,13 +65,17 @@ void volumecontrol(unsigned int *buf, volatile short int* volumenum, int buffers
  * shifts bits in 'buf' accordingly to 'volumenum' to adjust volume of music
  */
 
-unsigned int loadSong(char* fname, int* handle, int index);
+int loadSong(alt_up_sd_card_dev* sd, char* fname, int* handle, int index);
+/*
+ * loads song with file name 'fname' to specified index in the song
+ */
 
 
-unsigned int calcSongLength(unsigned int size_of_file);
+int calcSongLength(unsigned int size_of_file);
 /*
  * calculates and returns the length of a song given 'size_of_file'
  */
+
 
 
 #endif /* UTILITIES_H_ */

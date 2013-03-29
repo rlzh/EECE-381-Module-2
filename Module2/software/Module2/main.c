@@ -10,24 +10,11 @@
 /*
  *  GLOBAL VARIABLES DECLARATION BEGIN
  */
-char* file_names[MAX_SONGS_ALLOWED];
+char* file_names[MAX_SONGS_ALLOWED]; // array of all files names in sd card
+volatile char* command;				 // used to receive commands android
 
-volatile char* command;
-volatile short int state;
-volatile short int state_old;
-volatile short int volume;
-volatile unsigned int file_id;
-volatile unsigned int song_index;
-volatile short int dj_flag;
-
-short int song_sel; // use to select between 2 songs in DJ mode
-
-unsigned char buf1[BUFFER_SIZE];
-unsigned char buf2[BUFFER_SIZE];
-volatile int buf_flag;
-volatile int buf_index;
-int buf2_count;
-int buf1_count;
+Song song1;
+Song song2;
 
 //DualChannel
 unsigned char buf3[BUFFER_SIZE];
@@ -48,251 +35,15 @@ unsigned int mic[96];
 
 const int bufferconst = 96;
 unsigned int sam[96];
-unsigned int sam1[96];
-int handle[2];
-alt_up_audio_dev* audio;
-alt_up_rs232_dev* uart;
 
+alt_up_audio_dev* audio;
+alt_up_sd_card_dev* sd;
+alt_up_rs232_dev* uart;
 /*
  *  GLOBAL VARIABLES DECLARATION END
  */
 
-int loadBuffer() {
-	unsigned char* buf;
-	int temp;
-	short ret;
-	unsigned int i;
-	if (buf_flag == 1){
-		buf = buf1;
-	}
-	else{
-		buf = buf2;
-	}
-	for (temp = 0;temp < BUFFER_SIZE; temp++){
-		ret = alt_up_sd_card_read(handle[song_sel]);
-		i++;
-		if (ret < 0){
-			if(buf_flag == 1)
-				buf1_count = temp;
-			else
-				buf2_count = temp;
-			return 1;
-		}
-		buf[temp] = ret;
-		if (state == PAUSE){
-			state_old = PAUSE;
-			printf("\npause in loadSongBuffer()\n");
-			alt_irq_disable(AUDIO_0_IRQ);
-			while (state == PAUSE); // wait while song paused
-			if (state == PLAY)
-				alt_irq_enable(AUDIO_0_IRQ);
-		}
-		if (state == NEXT || state == PREV){
-			printf("\nnext|prev in loadSongBuffer()\n");
-			if (state_old != PAUSE)
-				alt_irq_disable(AUDIO_0_IRQ);
-			buf1_count = 0;
-			buf2_count = 0;
-			return 2;
-		}
-	}
-	if(buf_flag == 1){
-		buf1_count = BUFFER_SIZE;
-	}
-	else{
-		buf2_count = BUFFER_SIZE;
-	}
-	return 0;
-}
-
-int playDualChannel (char *fname, char *fname1)
-{
-	unsigned int temp1;
-	unsigned int temp2;
-
-	//Calls twice
-	temp1 = loadSong(fname, &handle[song_sel], song_index);
-	temp1 = loadSong(fname, &handle[song_sel], song_index);
-	temp2 = loadSong(fname1, &handle[song_sel], song_index);
-	temp2 = loadSong(fname1, &handle[song_sel], song_index);
-	temp1 = calcSongLength (temp1);
-	temp2 = calcSongLength (temp2);
-	/*
-	 * Song length will be here, left out for testing for now
-	 *
-	 */
-	int end_of_song = 0;
-	int buf_flag_old;
-	buf1_count = BUFFER_SIZE;
-	buf2_count = BUFFER_SIZE;
-	buf_index = 0;
-	buf_flag = 1;
-	buf1_count1 = BUFFER_SIZE;
-	buf2_count1 = BUFFER_SIZE;
-	buf_index1 = 0;
-	buf_flag1 = 1;
-
-	//Need  New Load buffer Method
-}
-
-
-
-int playSong(char* fname){
-	unsigned int temp;
-	temp = loadSong(fname, &handle[song_sel], song_index);
-	temp = loadSong(fname, &handle[song_sel], song_index);// call twice to make sure no garbage in reading
-
-	temp = calcSongLength(temp);
-	char* song_length = malloc(20*sizeof(char));
-	// use this to convert int to string since the libraries do not include 'itoa()'
-	snprintf(song_length, sizeof(song_length), "%d", temp);
-	printf("\nsong_length: %s seconds\n", song_length);//debug
-	//sendToAndroid(song_length);
-	free(song_length);
-
-	int end_of_song = 0;
-	int buf_flag_old;
-	buf1_count = BUFFER_SIZE;
-	buf2_count = BUFFER_SIZE;
-	buf_index = 0;
-	buf_flag = 1;
-
-	loadBuffer();
-	alt_irq_enable(AUDIO_0_IRQ);
-
-	buf_flag = 2;
-	buf_flag_old = buf_flag;
-	unsigned int i=0;
-	while(1){
-		//printf("iteration : %d\n", i); // debugging
-		//printf("volume : %d\n", volume);
-		//printf("state : %d\n", state);
-		//printf("fid : %d\n", file_id);
-		alt_irq_enable(AUDIO_0_IRQ);	// <----- adding these 3 fixes glitches but why???
-		alt_irq_enable(AUDIO_0_IRQ);	// <-----
-		alt_irq_enable(AUDIO_0_IRQ);	// <-----
-
-		if(state == IDLE && state_old!=IDLE){
-			state = state_old;
-		}
-		if (state == PLAY){
-			end_of_song = loadBuffer();
-			while (buf_flag == buf_flag_old){
-				if(state == NEXT || state == PREV){
-					buf_flag = abs(3-buf_flag_old);
-				}
-			}
-			buf_flag_old = buf_flag;
-		}
-		if (state == PAUSE){
-			state_old = PAUSE;
-			printf("\npause song play()\n "); //debug
-			alt_irq_disable(AUDIO_0_IRQ);
-			while (state == PAUSE); // wait while song paused
-			if (state == PLAY){
-				alt_irq_enable(AUDIO_0_IRQ);
-			}
-		}
-		if(state == NEXT || state == PREV){
-			printf("\nnext song play()\n");	//debug
-			if (state_old != PAUSE)
-				alt_irq_disable(AUDIO_0_IRQ);
-			break;
-		}
-		if (end_of_song == 1){
-			state_old = PAUSE;
-			state = PAUSE;
-			printf("\nend of song play()\n"); //debug
-			while (buf_flag == buf_flag_old);
-			alt_irq_disable(AUDIO_0_IRQ);
-			break;
-		}
-		i++; // debug
-	}
-	return 0;
-}
-
-void songManager(void){
-	state_old = IDLE;
-	char* f_name;
-	while(1){
-		if (dj_flag == 1){
-			break;
-		}
-		if(state != state_old && state != IDLE){
-			printf("\nstate change\n");
-			if (state == PLAY){ // play song
-				printf("\nplay song songManager()\n");
-				state_old = state;
-				f_name = getFileName(file_names, file_id); // get file name
-				playSong(f_name);
-			}
-			else if(state == NEXT){ // play next song
-				printf("\nnext song songManager()\n");
-				if (state_old == PLAY){
-					state_old = state;
-					state = PLAY;
-				}
-				else {
-					state_old = PAUSE;
-					state = PAUSE;
-				}
-			}
-			else if(state == PREV){ // play prev song
-				printf("\nprev song songManager()\n");
-				if (state_old == PLAY){
-					state_old = state;
-					state = PLAY;
-				}
-				else {
-					state_old = PAUSE;
-					state = PAUSE;
-				}
-			}
-		}
-	}
-	return;
-}
-
-void audio_configs_setup(void) {
-	alt_up_av_config_dev * av_config = alt_up_av_config_open_dev(AUDIO_AND_VIDEO_CONFIG_0_NAME);
-	alt_up_av_config_reset(av_config);
-	while (!alt_up_av_config_read_ready(av_config)) {
-	}
-	audio = alt_up_audio_open_dev(AUDIO_0_NAME);
-	alt_up_audio_reset_audio_core(audio);
-}
-
-void audioISR(void * context, unsigned int ID_IRQ) {
-	int i;
-	unsigned char* buf;
-	if(buf_flag1 == 2){
-		buf = buf1;
-	}
-	else {
-		buf = buf2;
-	}
-	for (i = 0; i < bufferconst; i++){
-		sam[i] = (unsigned int)((buf[buf_index + 1] << 8) | buf[buf_index]) << 8;
-		buf_index += 2; // increasing this makes sound higher octave
-
-		if((buf_flag == 2 && buf_index >= buf1_count)){ // buffer 1 is empty
-			buf_index = 0;
-			buf = buf2;
-			buf_flag = 1;
-		}
-		else if((buf_flag == 1 && buf_index >= buf2_count)){ // buffer 2 is empty
-			buf_index = 0;
-			buf = buf1;
-			buf_flag = 2;
-		}
-	}
-	volumecontrol(sam,&volume,bufferconst);
-
-	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_LEFT);
-	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
-}
-
+/*
 void dualchannelISR (void * context, unsigned int ID_IRQ)
 {
 	int i;
@@ -349,6 +100,63 @@ void dualchannelISR (void * context, unsigned int ID_IRQ)
 
 }
 
+void Microphone (void)
+{
+	alt_up_audio_read_fifo(testmic,mic,96, ALT_UP_AUDIO_LEFT);
+	alt_up_audio_read_fifo(testmic,mic,96, ALT_UP_AUDIO_RIGHT);
+
+	alt_up_audio_write_fifo(audio, mic, bufferconst, ALT_UP_AUDIO_LEFT);
+	alt_up_audio_write_fifo(audio, mic, bufferconst, ALT_UP_AUDIO_RIGHT);
+}
+
+
+int playDualChannel (char *fname, char *fname1)
+{
+	unsigned int temp1;
+	unsigned int temp2;
+
+	//Calls twice
+	temp1 = loadSong(fname, &handle[song_sel], song_index);
+	temp1 = loadSong(fname, &handle[song_sel], song_index);
+	temp2 = loadSong(fname1, &handle[song_sel], song_index);
+	temp2 = loadSong(fname1, &handle[song_sel], song_index);
+	temp1 = calcSongLength (temp1);
+	temp2 = calcSongLength (temp2);
+
+	//  Song length will be here, left out for testing for now
+
+
+	int end_of_song = 0;
+	int buf_flag_old;
+	buf1_count = BUFFER_SIZE;
+	buf2_count = BUFFER_SIZE;
+	buf_index = 0;
+	buf_flag = 1;
+	buf1_count1 = BUFFER_SIZE;
+	buf2_count1 = BUFFER_SIZE;
+	buf_index1 = 0;
+	buf_flag1 = 1;
+
+	//Need  New Load buffer Method
+}
+
+void modifySingleorDualflag(int option)
+{
+	singleordual = option;
+}
+
+
+*/
+void audio_configs_setup(void) {
+	alt_up_av_config_dev * av_config = alt_up_av_config_open_dev(AUDIO_AND_VIDEO_CONFIG_0_NAME);
+	alt_up_av_config_reset(av_config);
+	while (!alt_up_av_config_read_ready(av_config)) {
+	}
+	audio = alt_up_audio_open_dev(AUDIO_0_NAME);
+	alt_up_audio_reset_audio_core(audio);
+}
+
+
 void uart_configs_setup(void){
 	printf("UART Initialization\n");
 	uart = alt_up_rs232_open_dev(RS232_0_NAME);
@@ -362,76 +170,227 @@ void androidListenerISR(void * context, unsigned int ID_IRQ){
 	while (alt_up_rs232_get_used_space_in_read_FIFO(uart)) {// clear read FIFO
 		alt_up_rs232_read_data(uart, &data, &parity);
 	}
-	if (dj_flag == 0){
-		parseCommand(command, &volume, &state, &file_id);
-		//parseCommand(command, &volume, &state, &file_id, &song_index);
+	parseCommand(command, &(song1.volume), &(song1.state), &(song1.file_id));
+	//parseCommand(command, &volume, &state, &file_id, &song_index);
+
+}
+void sd_card_configs_setup(void){
+	sd = NULL;
+	sd = alt_up_sd_card_open_dev("/dev/Altera_UP_SD_Card_Avalon_Interface_0");
+}
+
+void audioISR(void * context, unsigned int ID_IRQ) {
+	int i;
+	for (i = 0; i < bufferconst; i++){
+		sam[i] = (unsigned int) song1.buf1[song1.play_index];
+		song1.play_index++;
+		if (song1.play_index == BUFFER_SIZE ){
+				song1.play_index = 0;
+		}
 	}
-	else if(dj_flag == 1){
-		//TO-DO: implement parseCommandDJMode()
+	volumecontrol(sam,&(song1.volume),bufferconst);
+
+	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_LEFT);
+	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
+}
+
+int state_checker( short int* state,  short int* state_old){
+	if (*state == PAUSE){
+		*state_old = PAUSE;
+		alt_irq_disable(AUDIO_0_IRQ);
+		while (*state == PAUSE);
+		if (*state == PLAY)
+			alt_irq_enable(AUDIO_0_IRQ);
+	}
+	if (*state == NEXT || *state == PREV){
+		if (*state_old != PAUSE)
+			alt_irq_disable(AUDIO_0_IRQ);
+		return 1;
+	}
+	return 0;
+}
+
+int load(int load_size, Song* song_ptr, bool init){
+	int i;
+	int ret1 = 0;
+	int ret2 = 0;
+	int half_buffer_size = BUFFER_SIZE/2;
+	//int quarter_buffer_size = BUFFER_SIZE/4;  // could use this variable instead of 'third_buffer_size'
+	int third_buffer_size = BUFFER_SIZE/3;
+	for (i = 0; i < load_size; i++){
+		if((*song_ptr).state == IDLE && (*song_ptr).state_old!=IDLE)
+			(*song_ptr).state = (*song_ptr).state_old;
+		if (!init){
+			if (abs((*song_ptr).load_index - ((*song_ptr).play_index)) > (half_buffer_size)){
+				while (abs((*song_ptr).load_index - ((*song_ptr).play_index)) > (third_buffer_size)
+						&& (*song_ptr).state == PLAY){
+						// do nothing & wait;
+				}
+			}
+		}
+		//if (state_checker(&((*song_ptr).state),&((*song_ptr).state_old)) == 1) <-- Function state_checker seems to be slowing code down
+					//return -1;
+		if ((*song_ptr).state == PAUSE){
+			(*song_ptr).state_old = PAUSE;
+			alt_irq_disable(AUDIO_0_IRQ);
+			while ((*song_ptr).state == PAUSE);
+			if ((*song_ptr).state == PLAY)
+				alt_irq_enable(AUDIO_0_IRQ);
+		}
+		if ((*song_ptr).state == NEXT || (*song_ptr).state == PREV){
+			if ((*song_ptr).state_old != PAUSE)
+				alt_irq_disable(AUDIO_0_IRQ);
+			return 1;
+		}
+
+		if ((*song_ptr).load_index == BUFFER_SIZE)
+			(*song_ptr).load_index = 0;
+
+		if (i % 2 == 0){
+			ret1 = alt_up_sd_card_read((*song_ptr).handle);
+		} else {
+			ret2 = alt_up_sd_card_read((*song_ptr).handle);
+			if (ret1 < 0 || ret2 < 0) { return 1; }
+			(*song_ptr).buf1[(*song_ptr).load_index] = (ret2 << 8 | ret1) << 8;
+			(*song_ptr).load_index++;
+		}
+	}
+	return 0;
+}
+void play(Song* song_ptr){
+	int init_load_size = BUFFER_SIZE;
+	int ret;
+
+	(*song_ptr).song_size = (unsigned int) loadSong(sd, (*song_ptr).file_name, &((*song_ptr).handle), 44);
+	alt_up_sd_card_fclose((*song_ptr).handle);
+	(*song_ptr).song_size = (unsigned int) loadSong(sd, (*song_ptr).file_name, &((*song_ptr).handle), 44);
+
+	(*song_ptr).song_length = (unsigned int) calcSongLength((*song_ptr).song_size);
+	char* song_length = malloc(20*sizeof(char));
+	snprintf(song_length, sizeof(song_length), "%d", (*song_ptr).song_length);
+	printf("song length: %s seconds\n", song_length); 	//debug
+	//sendToAndroid(song_length);
+
+	(*song_ptr).song_index = 0;
+	(*song_ptr).load_index = 0;
+	(*song_ptr).play_index = 0;
+
+	printf("load buffer initial\n");  //debug
+	load(init_load_size, (song_ptr), false);
+	printf("enable IRQ\n");   // debug
+	alt_irq_enable(AUDIO_0_IRQ);
+	ret = load(((*song_ptr).song_size-init_load_size), (song_ptr), false);
+	alt_irq_disable(AUDIO_0_IRQ);
+	alt_up_sd_card_fclose((*song_ptr).handle);
+	if (ret == 0){
+		(*song_ptr).state_old = PAUSE;
+		(*song_ptr).state = PAUSE;
+	}
+	return;
+}
+
+void songManager(void){
+	song1.state_old = IDLE;
+	while(1){
+		if(song1.state != song1.state_old && song1.state != IDLE){
+			printf("\nstate change\n");
+			if (song1.state == PLAY){ // play song
+				printf("\nplay song songManager()\n");
+				song1.state_old = song1.state;
+				song1.file_name = getFileName(file_names, song1.file_id); // get file name
+				//playSong(&song1);
+				play(&song1);
+			}
+			else if(song1.state == NEXT){ // play next song
+				printf("\nnext song songManager()\n");
+				if (song1.state_old == PLAY){
+					song1.state_old = song1.state;
+					song1.state = PLAY;
+				}
+				else {
+					song1.state_old = PAUSE;
+					song1.state = PAUSE;
+				}
+			}
+			else if(song1.state == PREV){ // play prev song
+				printf("\nprev song songManager()\n");
+				if (song1.state_old == PLAY){
+					song1.state_old = song1.state;
+					song1.state = PLAY;
+				}
+				else {
+					song1.state_old = PAUSE;
+					song1.state = PAUSE;
+				}
+			}
+		}
 	}
 }
 
-void modifySingleorDualflag(int option)
-{
-	singleordual = option;
-}
-
-void Microphone (void)
-{
-	alt_up_audio_read_fifo(testmic,mic,96, ALT_UP_AUDIO_LEFT);
-	alt_up_audio_read_fifo(testmic,mic,96, ALT_UP_AUDIO_RIGHT);
-
-	alt_up_audio_write_fifo(audio, mic, bufferconst, ALT_UP_AUDIO_LEFT);
-	alt_up_audio_write_fifo(audio, mic, bufferconst, ALT_UP_AUDIO_RIGHT);
-}
 
 int main() {
 	int i;
 	int file_count;
-	///////////////////// INITIALIZE GLOBAL VARIABLES /////////////////////////////
-	volume = 0;
-	song_sel = 0;
-	dj_flag = 0;
-	singleordual = 0;
-	state = IDLE;
-	song_index = 44;
+	/////////////// INITIALIZE GLOBAL VARIABLES ///////////////////////////////
+	song1.volume = 0;
+	song1.state = IDLE;
 	for(i=0; i<MAX_SONGS_ALLOWED; i++){
 			file_names[i]= malloc(MAX_FNAME_LENGTH*sizeof(char));
 	}
 
-	loadSongInfo();
+	loadSongInfo();	// send song info to android
+
 	setFileId(file_names, &file_count);
+
 	// debug
-	/*for (i=0; i< file_count; i++){
+	for (i=0; i< file_count; i++){
 		printf("file_name : %s\n", file_names[i]);
 		printf("file id : %d\n", i);
-	}*/
+	}
+	//////////////////////// SETUP SD CARD //////////////////////////////////
+	sd_card_configs_setup();
 
-	//////////////////////// SETUP UART //////////////////////////////////////
+	//////////////////////// SETUP UART ////////////////////////////////////
 	uart_configs_setup();
 	alt_up_rs232_enable_read_interrupt(uart);
 	alt_irq_register(RS232_0_IRQ, 0, (void*) androidListenerISR);
 	alt_irq_enable(RS232_0_IRQ);
 
-	while(state != PLAY);	// wait for android to play song
 
-	//////////////////////// SETUP AUDIO ///////////////////////////////////////
+	while(song1.state != PLAY);	// wait for android to play song
+
+
+	//////////////////////// SETUP AUDIO ///////////////////////////////////
 	audio_configs_setup();
 	alt_up_audio_enable_write_interrupt(audio);
 	alt_irq_register(AUDIO_0_IRQ, 0, (void*) audioISR);
 
+	songManager();	// infinite loop
 
-	while(1){
-		songManager();	// infinite loop
-		//TO-DO: implement djManager()
-	}
+	//////////////////////// TESGING /////////////////////////////////////
+	/*
 
-	/////////////////////// TESTING ///////////////////////////////////////////
-	int handle1;
-	int handle2;
-	dj_flag = 1;
-	loadSong("MIA.WAV",&handle1, 44);
+	song2.state = PLAY;
+	song2.file_name = "DYWC.WAV";
+	play(&song2);
+	int load_size = BUFFER_SIZE;
+	int ret;
 
+	song2.song_size = loadSong(sd, song2.file_name, &(song2.handle), 44);
+
+	song2.song_index = 0;
+	song2.load_index = 0;
+	song2.play_index = 0;
+
+	printf("load buffer initial\n");
+	load(load_size, &song2, false);
+
+	printf("enable IRQ\n");
+	alt_irq_enable(AUDIO_0_IRQ);
+
+	ret = load((song2.song_size-load_size), &song2, false);
+	alt_irq_disable(AUDIO_0_IRQ);
+	*/
 	return 0;
 }
 

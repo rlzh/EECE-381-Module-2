@@ -26,7 +26,7 @@ void sendToAndroid(char* message) {
 	alt_up_rs232_write_data(uart, (char) strlen(message));
 
 	// Now send the actual message to the Middleman
-
+	assert(strlen(message) <= MAX_BYTES_PER_MESSAGE);
 	for (i = 0; i < strlen(message); i++) {
 		alt_up_rs232_write_data(uart, message[i]);
 	}
@@ -156,7 +156,7 @@ void loadSongInfo(){
 					ret = alt_up_sd_card_read(handle);
 					assert(ret >= 0);
 					file_index++;
-					strcat(song_info,&ret);
+					strcat(song_info,(char*)&ret);
 				}
 				alt_up_sd_card_fclose(handle);
 			}
@@ -177,7 +177,7 @@ void loadSongInfo(){
 
 void setFileId(char** file_names, int* file_count){
 	short int first_file = 0;
-	char* file_name;
+	char* file_name = '\0';
 
 	*file_count = 0;
 	alt_up_sd_card_dev* sd = NULL;
@@ -309,31 +309,36 @@ void volumecontrol(unsigned int* buf, volatile short int* volume, int buffersize
 	}
 }
 
-unsigned int loadSong(char* fname,int* handle, int index) {
+int loadSong(alt_up_sd_card_dev* sd, char* fname, int* handle, int index) {
 	short header[44];
-	unsigned int size_of_file;
+	int size_of_file;
+	//int sample_rate;
+	//int song_index;
 	int i;
-	alt_up_sd_card_dev* sd = NULL;
-	sd = alt_up_sd_card_open_dev("/dev/Altera_UP_SD_Card_Avalon_Interface_0");
 	if (sd != NULL && alt_up_sd_card_is_Present() && alt_up_sd_card_is_FAT16()) {
-		*handle = alt_up_sd_card_fopen(fname, false);
-		assert(*handle >= 0);
+		if ((*handle = alt_up_sd_card_fopen(fname, false))>=0)
+			printf("File opened\n");
+		else
+			printf("File open error\n");
 	}
-	for (i = 0; i < index; i++) { // read header file
-		short ret = alt_up_sd_card_read(*handle);
-		assert(ret >= 0);
-		header[i] = ret;
+	if ( alt_up_sd_card_is_Present() && alt_up_sd_card_is_FAT16()) {
+		for (i = 0; i < index; i++) { // read header file
+			short ret = alt_up_sd_card_read(*handle);
+			assert(ret >= 0);
+			header[i] = ret;
+		}
 	}
-	//int sample_rate = (header[27] << 24 | header[26] << 16 | header[25] << 8 | header[24]);
+	//sample_rate = (header[27] << 24 | header[26] << 16 | header[25] << 8 | header[24]);
 	//printf("sample rate: %ld\n", sample_rate);
+
+	// calculate size of file
 	size_of_file = (header[43] << 24 | header[42] << 16 | header[41] << 8 | header[40]);
-	//printf("size of file: %d\n", song_size); //debug
+	printf("size of file: %d bytes\n", size_of_file); //debug
 	return size_of_file;
 }
 
-unsigned int calcSongLength(unsigned int size_of_file){
-	return (unsigned int)(size_of_file / BYTES_PER_SECOND);
+int calcSongLength(unsigned int size_of_file){
+	return (int)(size_of_file / BYTES_PER_SECOND);
 }
-
 
 
