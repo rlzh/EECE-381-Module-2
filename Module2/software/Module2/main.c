@@ -37,6 +37,10 @@ volatile int buf_index1;
 int buf2_count1;
 int buf1_count1;
 
+//Duelchannel or single channel flag
+int singleordual;
+
+
 //Testing for mic not done yet
 alt_up_audio_dev* testmic;
 unsigned char microphone;
@@ -100,6 +104,37 @@ int loadBuffer() {
 	}
 	return 0;
 }
+
+int playDualChannel (char *fname, char *fname1)
+{
+	unsigned int temp1;
+	unsigned int temp2;
+
+	//Calls twice
+	temp1 = loadSong(fname, &handle[song_sel], song_index);
+	temp1 = loadSong(fname, &handle[song_sel], song_index);
+	temp2 = loadSong(fname1, &handle[song_sel], song_index);
+	temp2 = loadSong(fname1, &handle[song_sel], song_index);
+	temp1 = calcSongLength (temp1);
+	temp2 = calcSongLength (temp2);
+	/*
+	 * Song length will be here, left out for testing for now
+	 *
+	 */
+	int end_of_song = 0;
+	int buf_flag_old;
+	buf1_count = BUFFER_SIZE;
+	buf2_count = BUFFER_SIZE;
+	buf_index = 0;
+	buf_flag = 1;
+	buf1_count1 = BUFFER_SIZE;
+	buf2_count1 = BUFFER_SIZE;
+	buf_index1 = 0;
+	buf_flag1 = 1;
+
+	//Need  New Load buffer Method
+}
+
 
 
 int playSong(char* fname){
@@ -232,10 +267,10 @@ void audioISR(void * context, unsigned int ID_IRQ) {
 	int i;
 	unsigned char* buf;
 	if(buf_flag1 == 2){
-		buf = buf3;
+		buf = buf1;
 	}
 	else {
-		buf = buf4;
+		buf = buf2;
 	}
 	for (i = 0; i < bufferconst; i++){
 		sam[i] = (unsigned int)((buf[buf_index + 1] << 8) | buf[buf_index]) << 8;
@@ -336,6 +371,10 @@ void androidListenerISR(void * context, unsigned int ID_IRQ){
 	}
 }
 
+void modifySingleorDualflag(int option)
+{
+	singleordual = option;
+}
 
 void Microphone (void)
 {
@@ -353,6 +392,7 @@ int main() {
 	volume = 0;
 	song_sel = 0;
 	dj_flag = 0;
+	singleordual = 0;
 	state = IDLE;
 	song_index = 44;
 	for(i=0; i<MAX_SONGS_ALLOWED; i++){
