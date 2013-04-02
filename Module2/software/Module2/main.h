@@ -21,7 +21,10 @@
 #include "utilities.h"
 #include "altera_avalon_timer.h"
 
+
+
 // CONSTANTS DECLARATION
+#define DEBUG_SIZE 			50000
 #define MAX_FNAME_LENGTH	8
 #define BUFFER_SIZE		  	32004
 #define SAMPLE_BUFFER_SIZE	96
@@ -52,15 +55,63 @@ struct music{
 };
 typedef struct music Song;
 
+struct mix{
+	volatile short int state;
+	volatile short int state_old;
+	volatile short int volume;
+	volatile unsigned int file_id;
+
+	bool load_finished;
+	bool play_finished;
+
+	char* file_name;
+	unsigned int song_length;		// in seconds
+	unsigned int song_size;			// in bytes
+
+	unsigned int* buffer;
+	volatile int play_index;
+	int load_index;
+	int handle;
+};
+typedef struct mix DJ_Song;
+
+/*
+struct mix{
+	volatile short int state;
+	volatile short int state_old;
+	volatile short int volume;
+	volatile unsigned int file_id1;
+	volatile unsigned int file_id2;
+
+	char* file_name1;
+	char* file_name2;
+	unsigned int song_length1;		    // in seconds
+	unsigned int song_length2;
+	unsigned int song_size1;			// in bytes
+	unsigned int song_size2;
+
+	unsigned int* buffer;
+	volatile int play_index1;
+	volatile int play_index2;
+	int load_index1;
+	int load_index2;
+	int handle1;
+	int handle2;
+};
+typedef struct mix DJ_Song;
+*/
 int load(int load_size, Song* song_ptr, bool init);
 void play(Song* song_ptr);
 void songManager(void);
+//void loadDJ(DJ_Song* dj_song_ptr);
+void playDJ(DJ_Song* dj_song_ptr1, DJ_Song* dj_song_ptr2);
+
 
 void audio_configs_setup(void);
 void audioISR(void * context, unsigned int ID_IRQ);
 
 void dualchannelISR (void * context, unsigned int ID_IRQ);
-void Microphone (void);
+void Microphone (unsigned int* sample);
 void modifySingleorDualflag(int option);
 
 void uart_configs_setup(void);

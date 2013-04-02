@@ -244,11 +244,11 @@ void parseCommand(volatile char* command, volatile short int* volume,
 }
 
 
-void volumecontrol(unsigned int* buf, volatile short int* volume, int buffersize) {
+void volumecontrol(unsigned int* buf, volatile short int volume, int buffersize) {
 	int i;
 
 	for (i = 0; i < buffersize; i++) {
-		if (*volume == 2)
+		if (volume == 2)
 		{
 			if (buf[i] == 0x007FFFFF)
 			{
@@ -259,7 +259,7 @@ void volumecontrol(unsigned int* buf, volatile short int* volume, int buffersize
 				buf[i] = buf[i] << 2;
 			}
 		}
-		if (*volume == 1)
+		if (volume == 1)
 		{
 			if (buf[i] == 0x007FFFFF)
 			{
@@ -270,11 +270,11 @@ void volumecontrol(unsigned int* buf, volatile short int* volume, int buffersize
 				buf[i] = buf[i] << 1;
 			}
 		}
-		if (*volume == 0)
+		if (volume == 0)
 		{
 			buf[i] = buf [i];
 		}
-		if (*volume == -1) {
+		if (volume == -1) {
 			if (buf[i] >= 0x00800000) {
 				buf[i] = buf[i] >> 1;
 				buf[i] = (buf[i] | 0x00800000);
@@ -282,7 +282,7 @@ void volumecontrol(unsigned int* buf, volatile short int* volume, int buffersize
 				buf[i] = buf[i] >> 1;
 			}
 		}
-		if (*volume == -2) {
+		if (volume == -2) {
 			if (buf[i] >= 0x00800000) {
 				buf[i] = buf[i] >> 2;
 				buf[i] = (buf[i] | 0x00C00000);// & 0x00DFFFFF;
@@ -290,7 +290,7 @@ void volumecontrol(unsigned int* buf, volatile short int* volume, int buffersize
 				buf[i] = buf[i] >> 2;
 			}
 		}
-		if (*volume == -3){
+		if (volume == -3){
 			if (buf[i] >= 0x00800000) {
 				buf[i] = buf[i] >> 3;
 				buf[i] = (buf[i] | 0x00E00000);
@@ -298,7 +298,7 @@ void volumecontrol(unsigned int* buf, volatile short int* volume, int buffersize
 				buf[i] = buf[i] >> 3;
 			}
 		}
-		if (*volume == -4){
+		if (volume == -4){
 			if (buf[i] >= 0x00800000) {
 				buf[i] = buf[i] >> 4;
 				buf[i] = (buf[i] | 0x00F00000);
@@ -324,6 +324,7 @@ int loadSong(alt_up_sd_card_dev* sd, char* fname, int* handle, int index) {
 	if ( alt_up_sd_card_is_Present() && alt_up_sd_card_is_FAT16()) {
 		for (i = 0; i < index; i++) { // read header file
 			short ret = alt_up_sd_card_read(*handle);
+			//printf("handle %d\n", *handle); // debug
 			assert(ret >= 0);
 			header[i] = ret;
 		}
@@ -336,6 +337,7 @@ int loadSong(alt_up_sd_card_dev* sd, char* fname, int* handle, int index) {
 	printf("size of file: %d bytes\n", size_of_file); //debug
 	return size_of_file;
 }
+
 
 int calcSongLength(unsigned int size_of_file){
 	return (int)(size_of_file / BYTES_PER_SECOND);

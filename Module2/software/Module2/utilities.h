@@ -60,7 +60,7 @@ void parseCommand(volatile char* command, volatile short int* volume,
  * and 'file_id'
  */
 
-void volumecontrol(unsigned int *buf, volatile short int* volumenum, int buffersize);
+void volumecontrol(unsigned int *buf, volatile short int volumenum, int buffersize);
 /*
  * shifts bits in 'buf' accordingly to 'volumenum' to adjust volume of music
  */
