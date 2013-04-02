@@ -16,7 +16,10 @@ volatile char* command;				 // used to receive commands android
 Song song;
 DJ_Song song1;
 DJ_Song song2;
-unsigned int l_buf;
+DJ_Song song3;
+DJ_Song song4;
+
+unsigned int l_buf[96];
 //DualChannel
 unsigned char buf3[BUFFER_SIZE];
 unsigned char buf4[BUFFER_SIZE];
@@ -47,11 +50,11 @@ alt_up_rs232_dev* uart;
 
 
 
-void Microphone (unsigned int *sample)
+void Microphone (void)
 {
 
-	unsigned int l_buf[96];
-	unsigned int r_buf[96];
+	//unsigned int l_buf[96];
+	//unsigned int r_buf[96];
 	int i;
 	// open the Audio port
 	//testmic = alt_up_audio_open_dev ("/dev/Audio");
@@ -62,30 +65,25 @@ void Microphone (unsigned int *sample)
 	//}
 	///else
 
-	int fifospace = alt_up_audio_read_fifo_avail(audio,ALT_UP_AUDIO_RIGHT);
+	int fifospace = alt_up_audio_read_fifo_avail(audio,ALT_UP_AUDIO_LEFT);
 
 	if (fifospace > 0 )
 	{
 
 		alt_up_audio_read_fifo(audio,(l_buf),96, ALT_UP_AUDIO_LEFT);
-		alt_up_audio_read_fifo(audio,(r_buf),96, ALT_UP_AUDIO_RIGHT);
+		//alt_up_audio_read_fifo(audio,(r_buf),96, ALT_UP_AUDIO_RIGHT);
 
 
 		//alt_up_audio_write_fifo(audio, (r_buf), 96, ALT_UP_AUDIO_LEFT);
 		//alt_up_audio_write_fifo(audio, (r_buf), 96, ALT_UP_AUDIO_RIGHT);
-
-	}else
-	{
-		for(i = 0;i<96;i++)
-		{
-			sam[i] = sam[i];
+	}
+	for (i = 0; i < bufferconst; i++){
+		if ((l_buf[i] & 0x8000) > 0){
+			l_buf[i] = l_buf[i] | 0xFFFF0000;
 		}
 	}
-	for (i = 0; i < 96; i++)
-	{
-		sam[i] = sam[i] + l_buf[i];
+	volumecontrol(l_buf, -2, 96);
 
-	}
 }
 
 
@@ -139,7 +137,7 @@ void audioISR(void * context, unsigned int ID_IRQ) {
 			song.play_index = 0;
 		}
 	}
-	volumecontrol(sam,&(song.volume),bufferconst);
+	volumecontrol(sam,(song.volume),bufferconst);
 
 	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_LEFT);
 	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
@@ -286,48 +284,50 @@ void songManager(void){
 
 void djISR(void * context, unsigned int ID_IRQ) {
 	int i;
-
+	bool both_positive = false;
+	bool both_negative = false;
 	for (i = 0; i < bufferconst; i++){
-		/*if (song1.play_index < song1.song_size && song2.play_index < song2.song_size){
-			sam[i] = (unsigned int)( song1.buffer[song1.play_index] + song2.buffer[song2.play_index]) << 8;
+		if (song1.buffer[song1.play_index] < 0x00800000 && song2.buffer[song2.play_index] < 0x00800000 ){
+			both_positive = true;
+		}
+		else if (song1.buffer[song1.play_index] > 0x00800000 && song2.buffer[song2.play_index] > 0x00800000){
+			both_negative = true;
+		}
+		if (song1.play_index < song1.song_size && song2.play_index < song2.song_size){
+			sam[i] = (unsigned int)( song1.buffer[song1.play_index] + song2.buffer[song2.play_index]) ;
 			song1.play_index++;
 			song2.play_index++;
 		}
 		else if (song1.play_index >= song1.song_size && song2.play_index < song2.song_size){
-			sam[i] = (unsigned int)(song2.buffer[song2.play_index]) << 8 ;
+			sam[i] = (unsigned int)(song2.buffer[song2.play_index])  ;
 			song2.play_index++;
 		}
 		else if (song1.play_index < song1.song_size && song2.play_index >= song2.song_size){
-			sam[i] = (unsigned int)(song1.buffer[song1.play_index]) << 8;
+			sam[i] = (unsigned int)(song1.buffer[song1.play_index]) ;
 			song1.play_index++;
 		}
-		else {*/
+		else {
 			sam[i] = 0;
-		//}
-
-		fifospace = alt_up_audio_read_fifo_avail(audio,ALT_UP_AUDIO_LEFT);
-
-		if (fifospace > 0 )
-		{
-			alt_up_audio_read_fifo(audio,&(l_buf),1, ALT_UP_AUDIO_LEFT);
-			//alt_up_audio_read_fifo(audio,(r_buf),96, ALT_UP_AUDIO_RIGHT);
-			//alt_up_audio_write_fifo(audio,&(l_buf), 1, ALT_UP_AUDIO_LEFT);
-
-		}else
-		{
-
-				sam[i] = sam[i];
+		}
+		/*if(sam[i]>= 0x00800000 && both_positive == true ){
+			sam[i] = 0x007FFFFF;
+		}
+		else if (sam[i] > 0x00FFFFFF && both_negative == true){
+			sam[i] = 0x00FFFFFF;
+		}
+		else if (sam[i] < 0x00800000 && both_negative == true){
+			sam[i] = sam[i] | 0x00800000;
 
 		}
-		sam[i]=sam[i]+l_buf;
+		sam[i] = sam[i] & 0x00FFFFFF;*/
 	}
-	//volumecontrol (sam, -4, 96);
-
-	//unsigned int r_buf[96];
-
-
-
-	alt_up_audio_write_fifo(audio,sam, bufferconst, ALT_UP_AUDIO_LEFT);
+	//volumecontrol (sam, -2, bufferconst);
+	Microphone();
+	for (i = 0; i<96;i++)
+	{
+		sam[i] = sam[i]+l_buf[i];
+	}
+	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_LEFT);
 	alt_up_audio_write_fifo(audio, sam, bufferconst, ALT_UP_AUDIO_RIGHT);
 }
 
@@ -349,6 +349,9 @@ void loadDJ(int load_size, DJ_Song* dj_song_ptr, bool init){
 				return;
 			val = (ret2 << 8 | ret1);
 			memcpy(&((*dj_song_ptr).buffer[(*dj_song_ptr).load_index]), &val, sizeof(val));
+			if ((((*dj_song_ptr).buffer[(*dj_song_ptr).load_index]) & 0x8000) > 0){
+				((*dj_song_ptr).buffer[(*dj_song_ptr).load_index]) = ((*dj_song_ptr).buffer[(*dj_song_ptr).load_index]) | 0xFFFF0000;
+			}
 			//(*dj_song_ptr).buffer[(*dj_song_ptr).load_index] = (ret2 << 8 | ret1);
 			(*dj_song_ptr).load_index++;
 		}
@@ -436,9 +439,12 @@ void playDJ(DJ_Song* dj_song_ptr1, DJ_Song* dj_song_ptr2){
 	//loadDJ(DEBUG_SIZE, dj_song_ptr2, true);// <--- uncomment to stream
 	loadDJ((*dj_song_ptr1).song_size, dj_song_ptr1, true);// <--- uncomment to load
 	loadDJ((*dj_song_ptr2).song_size, dj_song_ptr2, true);// <--- uncomment to load
-
-	(*dj_song_ptr1).song_size = ((*dj_song_ptr1).song_size)/ 2;
-	(*dj_song_ptr2).song_size = ((*dj_song_ptr2).song_size)/ 2;
+	/*int i;
+	for (i = 0; i < DEBUG_SIZE; i++){
+		printf("buffer %d\n", (*dj_song_ptr1).buffer[i]);
+	}*/
+	(*dj_song_ptr1).song_size = ((*dj_song_ptr1).song_size)/2;
+	(*dj_song_ptr2).song_size = ((*dj_song_ptr2).song_size)/2;
 
 	// play
 	(*dj_song_ptr1).play_index = 0;
@@ -450,11 +456,8 @@ void playDJ(DJ_Song* dj_song_ptr1, DJ_Song* dj_song_ptr2){
 	alt_irq_register(AUDIO_0_IRQ, 0, (void*) djISR);
 	printf("enable irq\n");
 	alt_irq_enable(AUDIO_0_IRQ);
-	int i;
 	while ((*dj_song_ptr1).play_index < (*dj_song_ptr1).song_size ||
 			(*dj_song_ptr2).play_index < (*dj_song_ptr2).song_size){
-		//for(i = 0; i < 96; i++)
-			//printf("l_buf[%d]  %d\n",i, l_buf[i]);
 		//loadDJ(DEBUG_SIZE, dj_song_ptr1, false); // <--- uncomment to stream
 		//loadDJ(DEBUG_SIZE, dj_song_ptr2, false); // <--- uncomment to stream
 	}
@@ -475,6 +478,10 @@ void playDJ(DJ_Song* dj_song_ptr1, DJ_Song* dj_song_ptr2){
 	free((*dj_song_ptr2).buffer);
 }
 
+void djManager(void){
+	//TO-DO
+
+}
 
 int main() {
 	int i;
@@ -514,15 +521,18 @@ int main() {
 
 	//////////////////////// TESGING /////////////////////////////////////
 
-	song1.file_name = "HELLO.WAV";
+	song1.file_name = "BARBRAS.WAV";
 	song2.file_name = "STEREOL.WAV";
-	 song1.volume = -4;
+	song3.file_name = "STOCKH.WAV";
+	song4.file_name = "HELLO.WAV";
+	song1.volume = -4;
 	playDJ(&song1, &song2);
 
-	/*
+/*
 	song.state = PLAY;
+	song.volume = -3;
 	song.file_name = "DYWC.WAV";
-	//play(&song);
+	play(&song);
 	int load_size = BUFFER_SIZE;
 	int ret;
 
@@ -543,7 +553,7 @@ int main() {
 	ret = load((song.song_size-load_size), &song, false);
 	printf("done\n");
 	alt_irq_disable(AUDIO_0_IRQ);
-	 */
+	*/
 
 	/*printf("song1\n"); // debug
 

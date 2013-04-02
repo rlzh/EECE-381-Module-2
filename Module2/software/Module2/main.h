@@ -111,7 +111,7 @@ void audio_configs_setup(void);
 void audioISR(void * context, unsigned int ID_IRQ);
 
 void dualchannelISR (void * context, unsigned int ID_IRQ);
-void Microphone (unsigned int* sample);
+void Microphone (void);
 void modifySingleorDualflag(int option);
 
 void uart_configs_setup(void);
