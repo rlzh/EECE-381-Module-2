@@ -21,7 +21,7 @@
 
 // CONSTANTS DECLARATION
 #define MAX_SONGS_ALLOWED		50
-#define MAX_BYTES_PER_MESSAGE	120
+#define MAX_BYTES_PER_MESSAGE	130
 #define BYTES_PER_SECOND		64000
 
 
@@ -36,12 +36,12 @@ char* receiveFromAndroid();
 /*
  * receives message from Android and returns as 'char*'
  */
-void loadSongInfo();
+void loadSongInfo(char* dir);
 /*
  * loads song information from SD card and send it to Android
  */
 
-void setFileId(char** file_names, int* file_count);
+void setFileId(char** file_names, int* file_count, char* dir);
 /*
  * stores all WAV files on SD card in 'file_names'
  * and the number of WAV files in 'file_count'
@@ -52,7 +52,16 @@ char* getFileName(char** file_names, int id);
  * returns the file name of song associated with 'file_id'
  * if song is not found, returns empty string
  */
-void parseCommand(volatile char* command, volatile short int* volume,
+
+void parseCommand(volatile char* command, volatile short int* dj_or_playlist, volatile short int* volume, volatile short int* state,
+				volatile unsigned int* file_id,volatile unsigned int* fid1, volatile unsigned int* fid2,
+				volatile int* ch1_balance, volatile int* ch2_balance, volatile int* song1_speed,
+				volatile int* song2_speed,volatile short int* state1, volatile short int* state2);
+/*
+ * master parse function : reads the first bit to decide calling between parseCommandPlaylist or parseCommandDJ
+ */
+
+void parseCommandPlaylist(volatile char* command, volatile short int* volume,
 			      volatile short int* state, volatile unsigned int* file_id/*,
 			      volatile unsigned int* song_index*/);
 /*
@@ -60,16 +69,32 @@ void parseCommand(volatile char* command, volatile short int* volume,
  * and 'file_id'
  */
 
-void volumecontrol(unsigned int *buf, volatile short int volumenum, int buffersize);
+void parseCommandDJ(volatile char* command, volatile unsigned int* fid1, volatile unsigned int* fid2,
+		volatile int* ch1_balance, volatile int* ch2_balance, volatile int* song1_speed,
+		volatile int* song2_speed, volatile short int* state1, volatile short int* state2);
+/*
+ * parse the commands received from android running in DJ mode
+ */
+
+void volumecontrol(unsigned int *buf, volatile short int volumenum, int buffersize);  // <----- deleted use function below
 /*
  * shifts bits in 'buf' accordingly to 'volumenum' to adjust volume of music
+ */
+
+void volumeAdjust (unsigned int* buffer, int volume, int buffer_size);
+/*
+ * shifts bits in 'buffer' accordingly to 'volume' to adjust volume of music
+ */
+
+void balanceAdjust(unsigned int* input1, unsigned int* input2, int balance);
+/*
+ * shifts the bits in input1 & input2 in accordance to balance
  */
 
 int loadSong(alt_up_sd_card_dev* sd, char* fname, int* handle, int index);
 /*
  * loads song with file name 'fname' to specified index in the song
  */
-
 
 int calcSongLength(unsigned int size_of_file);
 /*
