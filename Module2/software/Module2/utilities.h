@@ -56,7 +56,8 @@ char* getFileName(char** file_names, int id);
 void parseCommand(volatile char* command, volatile short int* dj_or_playlist, volatile short int* volume, volatile short int* state,
 				volatile unsigned int* file_id,volatile unsigned int* fid1, volatile unsigned int* fid2,
 				volatile int* ch1_balance, volatile int* ch2_balance, volatile int* song1_speed,
-				volatile int* song2_speed,volatile short int* state1, volatile short int* state2);
+				volatile int* song2_speed,volatile short int* state1, volatile short int* state2,
+				volatile unsigned int* play_time1, volatile unsigned int* play_time2);
 /*
  * master parse function : reads the first bit to decide calling between parseCommandPlaylist or parseCommandDJ
  */
@@ -71,7 +72,8 @@ void parseCommandPlaylist(volatile char* command, volatile short int* volume,
 
 void parseCommandDJ(volatile char* command, volatile unsigned int* fid1, volatile unsigned int* fid2,
 		volatile int* ch1_balance, volatile int* ch2_balance, volatile int* song1_speed,
-		volatile int* song2_speed, volatile short int* state1, volatile short int* state2);
+		volatile int* song2_speed, volatile short int* state1, volatile short int* state2,
+		volatile unsigned int* play_time1, volatile unsigned int* play_time2);
 /*
  * parse the commands received from android running in DJ mode
  */
@@ -100,6 +102,8 @@ int calcSongLength(unsigned int size_of_file);
 /*
  * calculates and returns the length of a song given 'size_of_file'
  */
+
+int calcPlayIndex(volatile unsigned int* song_time, volatile int* play_index);
 
 
 

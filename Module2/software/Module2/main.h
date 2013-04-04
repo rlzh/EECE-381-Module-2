@@ -77,6 +77,8 @@ struct mix{
 
 	unsigned int* buffer;
 	volatile int play_index;
+	volatile unsigned int play_time;
+	int play_time_old;
 	int load_index;
 	int handle;
 };

@@ -181,8 +181,7 @@ void loadSongInfo(char* dir){
 
 void setFileId(char** file_names, int* file_count, char* dir){
 	short int first_file = 0;
-	char* file_name = '\0';
-	printf("dir from setFileID = %s\n",dir);
+	//printf("dir from setFileID = %s\n",dir);
 	*file_count = 0;
 	alt_up_sd_card_dev* sd = NULL;
 	sd = alt_up_sd_card_open_dev("/dev/Altera_UP_SD_Card_Avalon_Interface_0");
@@ -190,6 +189,7 @@ void setFileId(char** file_names, int* file_count, char* dir){
 	if (sd != NULL && alt_up_sd_card_is_Present() && alt_up_sd_card_is_FAT16()) {
 		printf("Card connected.\n");
 		while(1) {
+			char* file_name = malloc(15*sizeof(char));
 			// finding the first file in directory
 			if ((first_file == 0) && (alt_up_sd_card_find_first(dir, file_name)) == 0){
 				printf("Listing WAV files found on disk\n");
@@ -210,13 +210,14 @@ void setFileId(char** file_names, int* file_count, char* dir){
 			}
 			else {
 				printf("Finished listing WAV files\n");
+				free(file_name);
 				break;
 			}
+			free(file_name);
 		}
 	}
 	return;
 }
-
 
 char* getFileName(char** file_names, int id){
 	return file_names[id];
@@ -225,7 +226,8 @@ char* getFileName(char** file_names, int id){
 void parseCommand(volatile char* command, volatile short int* dj_or_playlist, volatile short int* volume, volatile short int* state,
 		volatile unsigned int* file_id,volatile unsigned int* fid1, volatile unsigned int* fid2,
 		volatile int* ch1_balance, volatile int* ch2_balance, volatile int* song1_speed,
-		volatile int* song2_speed, volatile short int* state1, volatile short int* state2)
+		volatile int* song2_speed, volatile short int* state1, volatile short int* state2,
+		volatile unsigned int* play_time1, volatile unsigned int* play_time2)
 {
 	*dj_or_playlist = (unsigned int) atoi((char*) &command[0]);
 	if (*dj_or_playlist == 0){
@@ -233,28 +235,29 @@ void parseCommand(volatile char* command, volatile short int* dj_or_playlist, vo
 	}
 	else {
 		parseCommandDJ(command, fid1, fid2, ch1_balance, ch2_balance,
-					 song1_speed, song2_speed, state1, state2);
+					 song1_speed, song2_speed, state1, state2, play_time1, play_time2);
 	}
 }
 
 void parseCommandDJ(volatile char* command, volatile unsigned int* fid1, volatile unsigned int* fid2,
 		volatile int* ch1_balance, volatile int* ch2_balance, volatile int* song1_speed,
-		volatile int* song2_speed, volatile short int* state1, volatile short int* state2)
+		volatile int* song2_speed, volatile short int* state1, volatile short int* state2,
+		volatile unsigned int* play_time1, volatile unsigned int* play_time2)
 {
 	*fid1 = (unsigned int) atoi((char*) &command[2]);
 	*fid2 = (unsigned int) atoi((char*) &command[5]);
 	int bal = (unsigned int) atoi((char*) &command[8]);
-	if(bal >= 0 && bal < 11 )
+	if(bal >= 0 && bal < 11)
 		*ch1_balance = -4;
-	else if (bal >= 11 && bal < 22 )
+	else if (bal >= 11 && bal < 22)
 		*ch1_balance = -3;
-	else if (bal >= 22 && bal < 33 )
+	else if (bal >= 22 && bal < 33)
 		*ch1_balance = -2;
-	else if (bal >= 33 && bal < 44 )
+	else if (bal >= 33 && bal < 44)
 		*ch1_balance = -1;
-	else if (bal >= 44 && bal < 55 )
+	else if (bal >= 44 && bal < 55)
 		*ch1_balance = 0;
-	else if (bal >= 55 && bal < 66 )
+	else if (bal >= 55 && bal < 66)
 		*ch1_balance = 1;
 	else if (bal >= 66 && bal < 77)
 		*ch1_balance = 2;
@@ -286,8 +289,11 @@ void parseCommandDJ(volatile char* command, volatile unsigned int* fid1, volatil
 
 	*song1_speed = (unsigned int) atoi((char*) &command[14]);
 	*song2_speed = (unsigned int) atoi((char*) &command[16]);
-	*state1 = (unsigned int) atoi((char*) &command[18]);
-	*state2 = (unsigned int) atoi((char*) &command[20]);
+	*state1 = (short int) atoi((char*) &command[18]);
+	*state2 = (short int) atoi((char*) &command[20]);
+	*play_time2 =(unsigned int) atoi((char*) &command[22]);
+	*play_time1 = (unsigned int) atoi((char*) &command[25]);
+
 }
 
 void parseCommandPlaylist(volatile char* command, volatile short int* volume,
@@ -390,5 +396,15 @@ int calcSongLength(unsigned int size_of_file){
 	return (int)(size_of_file / BYTES_PER_SECOND);
 }
 
+int calcPlayIndex(volatile unsigned int* play_time, volatile int* play_index){
+	if ((*play_time) != 99){
+		//printf("play time : %d\n", *play_time);
+		*play_index = ((*play_time) * (BYTES_PER_SECOND))/2;
+		//printf("play index : %d\n", *play_index);
+		//*play_time = 99;
+		return ((*play_time) * (BYTES_PER_SECOND))/2;
+	}
+	return * play_index;
+}
 
 
