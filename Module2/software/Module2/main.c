@@ -92,15 +92,10 @@ void androidListenerISR(void * context, unsigned int ID_IRQ){
 	while (alt_up_rs232_get_used_space_in_read_FIFO(uart)) {// clear read FIFO
 		alt_up_rs232_read_data(uart, &data, &parity);
 	}
-	if(irq_flag == true){
-		alt_irq_disable(AUDIO_0_IRQ);
-	}
 	parseCommand(command, &dj_or_playlist, &((song).volume),&(song.state),&(song.file_id),&(curr_song2.file_id),
 			&(curr_song1.file_id),&channel2_balance, &channel1_balance, &speed2, &speed1, &(curr_song2.state),
 			&(curr_song1.state), &(curr_song1.play_time), &(curr_song2.play_time));
-	if(irq_flag == true){
-		alt_irq_enable(AUDIO_0_IRQ);
-	}
+
 	/*parseCommand(command, &dj_or_playlist, &((song).volume),&(song.state),&(song.file_id),&(curr_song2.file_id),
 				&(curr_song1.file_id),&channel2_balance, &channel1_balance, &speed2, &speed1, &(curr_song2.state),
 				&(curr_song1.state));*/
@@ -272,15 +267,7 @@ void djISR(void * context, unsigned int ID_IRQ) {
 	int num2 = (curr_song2.play_index);
 
 	//num1 = calcPlayIndex(&(curr_song1.play_time), &num1);
-	(curr_song2.play_index) = calcPlayIndex(&(curr_song2.play_time), &(curr_song2.play_index));
-	/*if(flag2 == true){
-		curr_song2.play_index = temp2;
-		flag2 = false;
-	}
-	if(flag1 == true){
-		curr_song1.play_index = temp1;
-		flag1 = false;
-	}*/
+	//(curr_song2.play_index) = calcPlayIndex(&(curr_song2.play_time), &(curr_song2.play_index));
 
 	for (i = 0; i < bufferconst; i++){
 		sam1_song1_input = (unsigned int) (curr_song1.buffer[num1]) << 4;
@@ -417,14 +404,6 @@ void playDJ(DJ_Song* dj_song_ptr1, DJ_Song* dj_song_ptr2){
 	// play
 	alt_irq_register(AUDIO_0_IRQ, 0, (void*) djISR);
 	alt_irq_enable(AUDIO_0_IRQ);
-	/*(*dj_song_ptr1).play_finished = false;
-	(*dj_song_ptr2).play_finished = false;
-	 */
-	/*(*dj_song_ptr1).play_time = 10;
-	(*dj_song_ptr2).play_time = 8;
-	calcPlayIndex(&(*dj_song_ptr1).play_time,&(*dj_song_ptr1).play_index);
-	calcPlayIndex(&(*dj_song_ptr2).play_time,&(*dj_song_ptr2).play_index);
-	 */
 
 	int i =0;
 	while ((*dj_song_ptr1).play_index < (*dj_song_ptr1).buffer_size &&
@@ -437,8 +416,14 @@ void playDJ(DJ_Song* dj_song_ptr1, DJ_Song* dj_song_ptr2){
 			alt_irq_enable(AUDIO_0_IRQ);
 			curr_song1.play_time = 99;
 		}
-		//flag1 = calcPlayIndex(&(curr_song1.play_time), &temp1);
-	    //flag2 = calcPlayIndex(&(curr_song2.play_time), &temp2);
+		if(curr_song2.play_time != 99){
+			printf("play time2 = %d\n", curr_song2.play_time);
+			printf("play index2 = %d\n", curr_song2.play_index);
+			alt_irq_disable(AUDIO_0_IRQ);
+			curr_song2.play_index = calcPlayIndex(&curr_song2.play_time, &curr_song2.play_index);
+			alt_irq_enable(AUDIO_0_IRQ);
+			curr_song2.play_time = 99;
+		}
 		if ((*dj_song_ptr1).state == PAUSE && (*dj_song_ptr2).state == PAUSE){
 			printf("\nboth songs paused\n");	//debug
 			alt_irq_disable(AUDIO_0_IRQ);
@@ -529,12 +514,8 @@ int main() {
 	curr_song1.play_time = 0;
 	curr_song2.play_time = 0;
 	dj_or_playlist = 2;
-	temp1 = 0;
-	temp2 = 0;
-	flag1 = false;
-	flag2 = false;
-	irq_flag = false;
- 	command = malloc(30*sizeof(char));
+
+	command = malloc(30*sizeof(char));
 	for(i = 0; i < bufferconst; i++){
 		mic_buffer[i] = 0;
 	}
@@ -542,7 +523,6 @@ int main() {
 		playlist_file_names[i]= malloc(MAX_FNAME_LENGTH*sizeof(char));
 		dj_file_names[i] = malloc(MAX_FNAME_LENGTH*sizeof(char));
 	}
-	//sendToAndroid("asdfasdga"); // for testing
 	loadSongInfo("");	// sends song info to android
 	loadSongInfo(DJ_DIR);
 	char* dir = malloc(5*sizeof(char));
