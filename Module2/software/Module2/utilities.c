@@ -335,18 +335,18 @@ void volumeAdjust (unsigned int* buffer, int volume, int buffer_size){
 void balanceAdjust(unsigned int* input1, unsigned int* input2, int balance){
 	if (balance > 0){
 		if (balance == 4){
-			*input2 = 0;
+			*input2 = *input2 & 0x00000000;
 		}
 		else {
 			*input2 = *input2 >> balance;
 		}
 	}
 	else if (balance < 0){
-		if (balance == 4){
-			*input1 = 0;
+		if (balance == -4){
+			*input1 = *input1 & 0x00000000;
 		}
 		else {
-			*input1 = *input2 >> abs(balance);
+			*input1 = *input1 >> abs(balance);
 		}
 	}
 	else {

@@ -41,7 +41,7 @@ alt_up_rs232_dev* uart;
 
 void Microphone (void)
 {
-	//int i;
+	int i;
 
 	int fifospace = alt_up_audio_read_fifo_avail(audio,ALT_UP_AUDIO_LEFT);
 
@@ -52,11 +52,11 @@ void Microphone (void)
 		//alt_up_audio_write_fifo(audio, (r_buf), 96, ALT_UP_AUDIO_LEFT);
 		//alt_up_audio_write_fifo(audio, (r_buf), 96, ALT_UP_AUDIO_RIGHT);
 	}
-	/*for (i = 0; i < bufferconst; i++){
-		if ((l_buf[i] & 0x8000) > 0){
-			l_buf[i] = l_buf[i] | 0xFFFF0000;
+	for (i = 0; i < bufferconst; i++){
+		if ((mic_buffer[i] & 0x8000) > 0){
+			mic_buffer[i] = mic_buffer[i] | 0xFFFF0000;
 		}
-	}*/
+	}
 	//volumecontrol(mic_buffer, -2, 96);
 }
 
@@ -135,7 +135,6 @@ int load(int load_size, Song* song_ptr, bool init){
 			alt_irq_disable(AUDIO_0_IRQ);
 			while ((*song_ptr).state == PAUSE){
 				if (dj_or_playlist == 1){
-					alt_irq_disable(AUDIO_0_IRQ);
 					alt_up_sd_card_fclose(song.handle);
 					printf("\nbreak from pause\n");
 					return 0;
@@ -265,33 +264,37 @@ void djISR(void * context, unsigned int ID_IRQ) {
 		balanceAdjust(&sam1_song1_input, &sam1_song2_input, channel1_balance);
 		balanceAdjust(&sam2_song1_input, &sam2_song2_input, channel2_balance);
 
-		if ((curr_song1.play_index < curr_song1.buffer_size && curr_song2.play_index < curr_song2.buffer_size) &&
-				(curr_song1.state == PLAY && curr_song2.state == PLAY)){
+		if (curr_song1.play_index >= (curr_song1.buffer_size-1))
+			curr_song1.play_index = 0;
+		if (curr_song2.play_index >= (curr_song2.buffer_size-1))
+			curr_song2.play_index = 0;
+
+		if ((curr_song1.state == PLAY && curr_song2.state == PLAY)){
 			sam1[i] = (sam1_song1_input + sam1_song2_input);
 			sam2[i] = (sam2_song1_input + sam2_song2_input);
-			curr_song1.play_index++;
-			curr_song2.play_index++;
+			curr_song1.play_index+=1;
+			curr_song2.play_index+=1;
 		}
-		else if ((curr_song1.play_index >= curr_song1.buffer_size && curr_song2.play_index < curr_song2.buffer_size) ||
-				((curr_song1.state == PAUSE || curr_song1.state == IDLE)&& curr_song2.state == PLAY)){
+		else if (((curr_song1.state == PAUSE || curr_song1.state == IDLE)&& curr_song2.state == PLAY)){
 			sam1[i] = (sam1_song2_input);
 			sam2[i] = (sam2_song2_input);
 			curr_song2.play_index++;
 		}
-		else if ((curr_song1.play_index < curr_song1.buffer_size && curr_song2.play_index >= curr_song2.buffer_size) ||
-				(curr_song1.state == PLAY && (curr_song2.state == PAUSE || curr_song2.state == IDLE ))){
+		else if ((curr_song1.state == PLAY && (curr_song2.state == PAUSE || curr_song2.state == IDLE ))){
 			sam1[i] = (sam1_song1_input);
 			sam2[i] = (sam2_song1_input);
 			curr_song1.play_index++;
 		}
+
 		else {
 			sam1[i] = 0;
 			sam2[i] = 0;
 		}
 	}
-	/*Microphone(); // get microphone data
-	for (i = 0; i < 96; i++){ // merge microphone data with song data
-		sam[i] = sam[i] + mic_buffer[i];
+	Microphone(); // get microphone data
+	/*for (i = 0; i < 96; i++){ // merge microphone data with song data
+		sam1[i] = sam1[i] + mic_buffer[i];
+		sam2[i] = sam2[i] + mic_buffer[i];
 	}*/
 	alt_up_audio_write_fifo(audio, sam1, bufferconst, ALT_UP_AUDIO_LEFT);
 	alt_up_audio_write_fifo(audio, sam2, bufferconst, ALT_UP_AUDIO_RIGHT);
@@ -334,9 +337,8 @@ void loadDJ(int load_size, DJ_Song* dj_song_ptr, bool load_entire){
 			ret2 = alt_up_sd_card_read((*dj_song_ptr).handle);
 			if (ret1 < 0 || ret2 < 0){
 				(*dj_song_ptr).load_finished = true;
-				if (load_entire){
+				if (load_entire)
 					alt_up_sd_card_fclose((*dj_song_ptr).handle);
-				}
 				return;
 			}
 			val = (ret2 << 8 | ret1);
@@ -351,13 +353,14 @@ void loadDJ(int load_size, DJ_Song* dj_song_ptr, bool load_entire){
 
 void playDJ(DJ_Song* dj_song_ptr1, DJ_Song* dj_song_ptr2){
 	// play
-	printf("register irq\n");		// debug
 	alt_irq_register(AUDIO_0_IRQ, 0, (void*) djISR);
-	printf("enable irq\n");			// debug
 	alt_irq_enable(AUDIO_0_IRQ);
-	(*dj_song_ptr1).play_finished = false;
-	(*dj_song_ptr2).play_finished = false;
 
+	alt_avalon_timer_sc_init(0,AUDIO_0_IRQ_INTERRUPT_CONTROLLER_ID,AUDIO_0_IRQ,100);
+
+	/*(*dj_song_ptr1).play_finished = false;
+	(*dj_song_ptr2).play_finished = false;
+	*/
 	while ((*dj_song_ptr1).play_index < (*dj_song_ptr1).buffer_size &&
 			(*dj_song_ptr2).play_index < (*dj_song_ptr2).buffer_size){
 		if ((*dj_song_ptr1).state == PAUSE && (*dj_song_ptr2).state == PAUSE){
@@ -375,14 +378,14 @@ void playDJ(DJ_Song* dj_song_ptr1, DJ_Song* dj_song_ptr2){
 		}
 
 	}
-	if ((*dj_song_ptr1).play_index >= (*dj_song_ptr1).buffer_size){
+	/*if ((*dj_song_ptr1).play_index >= (*dj_song_ptr1).buffer_size){
 		(*dj_song_ptr1).play_finished = true;
 		(*dj_song_ptr1).play_index = 0;
 	}
 	if ((*dj_song_ptr2).play_index >= (*dj_song_ptr2).buffer_size){
 		(*dj_song_ptr2).play_finished = true;
 		(*dj_song_ptr2).play_index = 0;
-	}
+	}*/
 	printf("disable irq\n");			// debug
 	alt_irq_disable(AUDIO_0_IRQ);
 }
@@ -478,13 +481,12 @@ int main() {
 		djManager();
 	}*/
 	//////////////////////// TESGING /////////////////////////////////////
-	curr_song1.file_id = 5;
-	curr_song2.file_id = 4;
+	curr_song1.file_id = 0;
+	curr_song2.file_id = 1;
 	curr_song1.state = PLAY;
 	curr_song2.state = PLAY;
-	channel1_balance = 0;
-	channel2_balance = 0;
-	printf("dj manager\n");
+	channel1_balance = -4;
+	channel2_balance = 4;
 	djManager();
 
 	/*
