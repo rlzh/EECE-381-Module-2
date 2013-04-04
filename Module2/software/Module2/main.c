@@ -47,22 +47,17 @@ alt_up_rs232_dev* uart;
 void Microphone (void)
 {
 	int i;
-
 	int fifospace = alt_up_audio_read_fifo_avail(audio,ALT_UP_AUDIO_LEFT);
-
 	if (fifospace > 0 )
 	{
 		alt_up_audio_read_fifo(audio,(mic_buffer),96, ALT_UP_AUDIO_LEFT);
-		//alt_up_audio_read_fifo(audio,(r_buf),96, ALT_UP_AUDIO_RIGHT);
-		//alt_up_audio_write_fifo(audio, (r_buf), 96, ALT_UP_AUDIO_LEFT);
-		//alt_up_audio_write_fifo(audio, (r_buf), 96, ALT_UP_AUDIO_RIGHT);
 	}
 	for (i = 0; i < bufferconst; i++){
 		if ((mic_buffer[i] & 0x8000) > 0){
 			mic_buffer[i] = mic_buffer[i] | 0xFFFF0000;
 		}
 	}
-	//volumecontrol(mic_buffer, -2, 96);
+	//volumeAdjust(mic_buffer,1, 96); //<-------------------------------------------!!!!!!!!!!!! TESTING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 }
 
 void audio_configs_setup(void) {
@@ -96,9 +91,6 @@ void androidListenerISR(void * context, unsigned int ID_IRQ){
 			&(curr_song1.file_id),&channel2_balance, &channel1_balance, &speed2, &speed1, &(curr_song2.state),
 			&(curr_song1.state), &(curr_song1.play_time), &(curr_song2.play_time));
 
-	/*parseCommand(command, &dj_or_playlist, &((song).volume),&(song.state),&(song.file_id),&(curr_song2.file_id),
-				&(curr_song1.file_id),&channel2_balance, &channel1_balance, &speed2, &speed1, &(curr_song2.state),
-				&(curr_song1.state));*/
 }
 
 void audioISR(void * context, unsigned int ID_IRQ) {
@@ -270,10 +262,18 @@ void djISR(void * context, unsigned int ID_IRQ) {
 	//(curr_song2.play_index) = calcPlayIndex(&(curr_song2.play_time), &(curr_song2.play_index));
 
 	for (i = 0; i < bufferconst; i++){
-		sam1_song1_input = (unsigned int) (curr_song1.buffer[num1]) << 4;
-		sam1_song2_input = (unsigned int) (curr_song2.buffer[curr_song2.play_index]) << 4;
-		sam2_song1_input = (unsigned int) (curr_song1.buffer[num1]) << 4;
-		sam2_song2_input = (unsigned int) (curr_song2.buffer[curr_song2.play_index]) << 4;
+		if ((curr_song1.state != MIC && curr_song2.state != MIC)){
+			sam1_song1_input = (unsigned int) (curr_song1.buffer[num1]) << 4;
+			sam1_song2_input = (unsigned int) (curr_song2.buffer[curr_song2.play_index]) << 4;
+			sam2_song1_input = (unsigned int) (curr_song1.buffer[num1]) << 4;
+			sam2_song2_input = (unsigned int) (curr_song2.buffer[curr_song2.play_index]) << 4;
+		}
+		else {
+			sam1_song1_input = (unsigned int) (curr_song1.buffer[num1]) << 2;
+			sam1_song2_input = (unsigned int) (curr_song2.buffer[curr_song2.play_index]) << 2;
+			sam2_song1_input = (unsigned int) (curr_song1.buffer[num1]) << 2;
+			sam2_song2_input = (unsigned int) (curr_song2.buffer[curr_song2.play_index]) << 2;
+		}
 
 		balanceAdjust(&sam1_song1_input, &sam1_song2_input, channel1_balance);
 		balanceAdjust(&sam2_song1_input, &sam2_song2_input, channel2_balance);
@@ -340,11 +340,13 @@ void djISR(void * context, unsigned int ID_IRQ) {
 		}
 	}
 	curr_song1.play_index = num1;
-	Microphone(); // get microphone data
-	/*for (i = 0; i < 96; i++){ // merge microphone data with song data
-		sam1[i] = sam1[i] + mic_buffer[i];
-		sam2[i] = sam2[i] + mic_buffer[i];
-	}*/
+	if ((curr_song1.state == MIC && curr_song2.state == MIC)){
+		Microphone(); // get microphone data
+		for (i = 0; i < 96; i++){ // merge microphone data with song data
+			sam1[i] = sam1[i] + mic_buffer[i];
+			sam2[i] = sam2[i] + mic_buffer[i];
+		}
+	}
 	alt_up_audio_write_fifo(audio, sam1, bufferconst, ALT_UP_AUDIO_LEFT);
 	alt_up_audio_write_fifo(audio, sam2, bufferconst, ALT_UP_AUDIO_RIGHT);
 }

@@ -38,6 +38,7 @@
 #define RWD					4
 #define FWD					5
 #define NEXT				6
+#define MIC					7
 
 #define PLAYLIST_DIR		"PL/"
 #define DJ_DIR				"DJ/"
