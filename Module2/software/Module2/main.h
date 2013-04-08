@@ -52,10 +52,8 @@ struct music{
 	char* file_name;
 	unsigned int song_length;		// in seconds
 	unsigned int song_size;			// in bytes
-	unsigned int song_index;
 
 	unsigned int buf1[BUFFER_SIZE];
-	unsigned int buf2[BUFFER_SIZE];
 	volatile int play_index;
 	int load_index;
 	int handle;
