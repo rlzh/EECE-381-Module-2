@@ -52,6 +52,7 @@ struct music{
 	char* file_name;
 	unsigned int song_length;		// in seconds
 	unsigned int song_size;			// in bytes
+	unsigned int song_index;
 
 	unsigned int buf1[BUFFER_SIZE];
 	volatile int play_index;
@@ -66,9 +67,6 @@ struct mix{
 	volatile short int volume;    	// value between -1 to 8
 	volatile unsigned int file_id;
 
-	bool load_finished;
-	bool play_finished;
-
 	char* file_name;
 	unsigned int song_length;		// in seconds
 	unsigned int buffer_size;
@@ -77,7 +75,6 @@ struct mix{
 	unsigned int* buffer;
 	volatile int play_index;
 	volatile unsigned int play_time;
-	int play_time_old;
 	int load_index;
 	int handle;
 };
@@ -92,13 +89,13 @@ void djManager(void);
 
 void audio_configs_setup(void);
 void audioISR(void * context, unsigned int ID_IRQ);
+void djISR(void * context, unsigned int ID_IRQ);
 
-void dualchannelISR (void * context, unsigned int ID_IRQ);
 void Microphone (void);
-void modifySingleorDualflag(int option);
 
 void uart_configs_setup(void);
 void androidListenerISR(void * context, unsigned int ID_IRQ);
+void sd_card_configs_setup(void);
 
 
 #endif /* MAIN_H_ */
